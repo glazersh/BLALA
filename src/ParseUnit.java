@@ -85,8 +85,68 @@ public class ParseUnit {
             NumberFormat format = NumberFormat.getInstance(Locale.US);
             try {
                 Number number = format.parse(words[0]);
-                String numberInteger = number.toString();
-                convertNumberToLetter(Integer.parseInt(numberInteger), false, true);
+                String numberInString = number.toString();
+                try
+                {
+                    double numInDouble;
+                    int numInInt;
+                    if(numberInString.contains(".")) {
+                        numInDouble =Double.parseDouble(numberInString);
+                        if(numInDouble < 1000) {
+                            System.out.println(numInDouble);
+                            return;
+                        }
+                        if(numInDouble>999 && numInDouble < 1000000) {
+                            System.out.println(numInDouble / 1000 + "K");
+                            return;
+                        }
+                        if(numInDouble>999999 && numInDouble < 1000000000) {
+                            System.out.println(numInDouble / 1000000 + "M");
+                            return;
+                        }
+                        if(numInDouble>999999999) {
+                            System.out.println(numInDouble / 1000000000 + "B");
+                            return;
+                        }
+                    }
+                    else {
+                        numInInt = Integer.parseInt(numberInString);
+
+                        if (numInInt < 1000) {
+                            System.out.println(numInInt);
+                            return;
+                        }
+                        if (numInInt > 999 && numInInt < 1000000) {
+                            System.out.println(numInInt / 1000 + "K");
+                            return;
+                        }
+                        if (numInInt > 999999 && numInInt < 1000000000) {
+                            System.out.println(numInInt / 1000000 + "M");
+                            return;
+                        }
+                        if (numInInt > 999999999) {
+                            System.out.println(numInInt / 1000000000 + "B");
+                            return;
+                        }
+                    }
+                }
+                catch(NumberFormatException e){}
+
+                if(numberInString.length()>=10){
+                    int size = numberInString.length();
+                    String bigNumber = numberInString.substring(0,size-9);
+                    String after = numberInString.substring(size-9,size-1);
+                    for(int i=after.length()-1;i>=0;i--){
+                        if(after.charAt(i) != '0'){
+                            after=after.substring(0,i+1);
+                            break;
+                        }
+                    }
+                    System.out.println(bigNumber+"."+after+"B");
+                }
+                else {
+                    convertNumberToLetter(Integer.parseInt(numberInString), false, true);
+                }
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -96,20 +156,22 @@ public class ParseUnit {
         else {
             int number = Integer.parseInt(words[0]);
             if (words[1].equals("Thousand")){
-                number = number*1000;
+                System.out.println(number+"K");
+                return;
             }
             if (words[1].equals("Million")){
-                number = number*1000000;
+                System.out.println(number+"M");
+                return;
             }
-
             if (words[1].equals("Billion")){
-                number = number*1000000000;
+                System.out.println(number+"B");
+                return;
             }
-
             if (words[1].equals("Trillion")){
-                number = number*1000000000*1000;
+                System.out.println(number*1000+"B");
+                return;
             }
-            convertNumberToLetter(number, false, true);
+            System.out.println(words[0]+" "+words[1]);
         }
     }
 
@@ -207,9 +269,23 @@ public class ParseUnit {
             return;
         }
         if(words.get(0).contains("$")){
-            String finalRecord = convertNumberToLetter(Integer.parseInt(words.get(0).substring(1)), true, true) + " Dollars";
-            System.out.println(finalRecord);
-            return;
+
+            NumberFormat format = NumberFormat.getInstance(Locale.US);
+            Number number = null;
+            try {
+                number = format.parse(words.get(0).substring(1));
+                String numberInString = number.toString();
+                if(Integer.parseInt(numberInString) < 1000000){
+                    System.out.println(words.get(0).substring(1) + " Dollars");
+                    return;
+                }
+                else {
+                    System.out.println(Integer.parseInt(numberInString)/1000000 + " M Dollars");
+                    return;
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
         }
         if(words.get(1).equals("m") || words.get(1).equals("bn")){
             try{
@@ -231,8 +307,36 @@ public class ParseUnit {
                 return;
             }catch(NumberFormatException e){}
         }
-        String finalRecord = convertNumberToLetter(Integer.parseInt(words.get(0)),true,true) + " Dollars";
-        System.out.println(finalRecord);
+        if(words.get(1).contains("/")){
+            System.out.println(words.get(0) + " " +words.get(1) + " Dollars");
+            return;
+        }
+        // just number
+        if(!words.get(0).contains(".")){
+            NumberFormat format = NumberFormat.getInstance(Locale.US);
+            Number number = null;
+            try {
+                number = format.parse(words.get(0));
+                String numberInString = number.toString();
+                int numberInInt = Integer.parseInt(numberInString);
+                if(numberInInt<1000000)
+                    System.out.println(words.get(0) +" Dollars");
+                else{
+                    System.out.println(numberInInt/1000000 + " M Dollars");
+                }
+            }catch (ParseException e) {
+                    e.printStackTrace();
+            }
+
+        }
+        else{
+            double number = Double.parseDouble(words.get(0));
+            if(number<1000000)
+                System.out.println(words.get(0) +" Dollars");
+            else{
+                System.out.println(number/1000000+ " M Dollars");
+            }
+        }
     }
 
 
