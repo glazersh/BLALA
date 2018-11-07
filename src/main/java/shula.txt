@@ -1,0 +1,47 @@
+import java.util.*;
+
+public class ParseShula {
+
+
+    Map<String, Integer> wordsDict = new HashMap<>();
+
+    Map<String, Map> fileDict = new HashMap<>();
+
+
+    public void mappingWords(String [] words){
+        wordsDict.put("Got",2);
+        for (String str: words
+             ) {
+            char c = str.charAt(0);
+            if(Character.isUpperCase(c)){
+                if(wordsDict.containsKey(Character.toLowerCase(c) + str.substring(1,str.length()))){
+                    Integer tmp = wordsDict.get((Character.toLowerCase(c) + str.substring(1,str.length())));
+                    wordsDict.put(Character.toLowerCase(c) + str.substring(1,str.length()), tmp+1);
+                    }
+                    else if (wordsDict.containsKey(str))
+                    {
+                    Integer tmp = wordsDict.get(str);
+                    wordsDict.put(str, tmp + 1);
+                    }else
+                        wordsDict.put(str,1);
+
+                } else {
+                if (wordsDict.containsKey(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()))) {
+                    Integer tmp = wordsDict.get(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()));
+                    wordsDict.remove(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()));
+                    wordsDict.put(str, tmp + 1);
+                } else if (wordsDict.containsKey(str)) {
+                    Integer tmp = wordsDict.get(str);
+                    wordsDict.put(str, tmp + 1);
+                } else
+                    wordsDict.put(str, 1);
+
+
+            }
+        }
+        System.out.print(wordsDict);
+
+
+ }
+
+}
