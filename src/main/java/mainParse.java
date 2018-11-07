@@ -22,7 +22,7 @@ public class mainParse {
         for(int i=0;i<allNumbers.length && true;i++){
             p.kindOfNumber(allNumbers[i]);
         }
-        System.out.println();
+
 
         String [] perc1 = {"6%"};
         String [] perc2 = {"10.6","percent"};
@@ -72,6 +72,12 @@ public class mainParse {
         String [] hyphen1 = {"Value-added"};
         String [] hyphen2 = {"step-by-step"};
         p.kindOfHyphen(hyphen2);
+
+       // String [] words = {"shula","Yes"};
+       // p.mappingWords(words);
+        System.out.println("~~~~~~~~");
+        p.printDic();
+        System.out.println();
     }
 
 

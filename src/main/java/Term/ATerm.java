@@ -3,6 +3,10 @@ package Term;
 public abstract class ATerm {
 
     int weight;
-    String finalName;
+    public String finalName;
+
+    public ATerm(String word){
+        finalName = word;
+    }
 
 }
