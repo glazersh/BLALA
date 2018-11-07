@@ -395,11 +395,24 @@ public class ParseUnit {
 
             }
         }
+        funcEnd();
         System.out.print(wordsDict);
 
 
     }
 
+    public void funcEnd(){
+        Iterator it = wordsDict.entrySet().iterator();
+        while(it.hasNext()){
+            Map.Entry pair = (Map.Entry)it.next();
+            if(Character.isUpperCase(pair.getKey().toString().charAt(0))){
+                Integer i = (Integer) pair.getValue();
+                String s = (String) pair.getKey();
+                wordsDict.remove(s);
+                wordsDict.put(s.toUpperCase(),i);
+            }
+        }
+    }
 
 }
 
