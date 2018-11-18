@@ -13,8 +13,16 @@ public class mainParse {
 
         ParseUnit p = new ParseUnit();
 
-        String [] tmp = {"shula", "dor", "shula", "dor"};
+        String [] tmp = {"polls"};
         p.parse(tmp);
+
+        String [] tmp2 = {"Between", "23.5", "and", "15.1"};
+        p.parse(tmp2);
+
+        String [] tmp3 = {"between", "23.5", "and", "15.1"};
+        p.parse(tmp2);
+
+
 
         String [] number1 = {"10,123"};
         String [] number2 = {"123","Thousand"};

@@ -17,6 +17,9 @@ public class ParseUnit {
     Set<String> stopWords = new HashSet<>();
     HashSet<Character>signs = new HashSet<>();
     Map<ATerm,Integer>TMP1 = new HashMap<>();
+     Stemmer stem = new Stemmer();
+
+
 
     public ParseUnit(){
         insertMonth();
@@ -24,15 +27,16 @@ public class ParseUnit {
         StopWords();
         insertSigns();
 
-        ATerm t1 = new Percent("45%");
-        ATerm t2 = new Percent("90%");
-        ATerm t3 = new Percent("45%");
-        ATerm t4 = new Percent("90%");
+        /*
+        ATerm t1 = new Percent("shula");
+        ATerm t2 = new Percent("Shula");
+        ATerm t3 = new Percent("SHULA");
         TMP1.put(t1,1);
         TMP1.put(t2,1);
         TMP1.put(t3,1);
-        TMP1.put(t4,1);
-        int x= 5;
+        int x= 4;
+        */
+
     }
 
     private void StopWords(){
@@ -127,7 +131,15 @@ public class ParseUnit {
         List <String>expression = new ArrayList();
         for(int i=0;i<allText.length;i++){
             String word = cutSigns(allText[i]);
-            if(!stopWords.contains(word.toLowerCase())) {
+
+            if(word.equals("Between") || !stopWords.contains(word.toLowerCase())) {
+
+                // stemmer
+                stem.add(word.toCharArray(),word.length());
+                stem.stem();
+                word = stem.toString();
+
+
                 try {
                     if(!word.equals("") && (word.charAt(0) == '$' || word.charAt(0) == '%'))
                         Integer.parseInt(word.substring(1));
@@ -160,10 +172,24 @@ public class ParseUnit {
                         kindOfNumber(tmp2);
                         expression.clear();
                         continue;
-                    } catch (NumberFormatException e2) {
-                        term = new Word(word);
-                        wordsDict.put(term.finalName,term);
+                    } catch (NumberFormatException e2) {}
+                    if(allText[i].equals("Between") && i+3 < allText.length){
+                        String[] tmp = new String[4];
+                        tmp[0] = allText[i];
+                        tmp[1] = allText[i+1];
+                        tmp[2] = allText[i+2];
+                        tmp[3] = allText[i+3];
+                        kindOfHyphen(tmp);
+                        i=i+3;
+
+
                     }
+                    else {
+                        term = new Word(word);
+                        wordsDict.put(term.finalName, term);
+                        TMP1.put(term, 1);
+                    }
+
                 }
             }
         }
@@ -183,41 +209,16 @@ public class ParseUnit {
     // don't forget to remove  this "-"
     public void kindOfHyphen(String [] words){
 
-        String [] wordsWithout = words[0].split("-");
-        String firstWord = wordsWithout[0];
-        String secondWord = wordsWithout[1];
-        // Word - Word
-        if (firstWord.matches("[a-zA-Z]+") && secondWord.matches("[a-zA-Z]+")){
-            String word = firstWord+"-"+secondWord;
-            if(wordsWithout.length == 3){
-                word += "-"+wordsWithout[2];
-            }
-            term = new Range(word);
-            if(wordsDict.containsKey(term))
-            wordsDict.put(term.finalName,term);
-            //System.out.println(word);
-            return;
-        }
-        // Number - Number
-        if (firstWord.matches("[0-9]+") && secondWord.matches("[0-9]+")){
-            term = new Range(firstWord+"-"+secondWord);
-            wordsDict.put(term.finalName,term);
-            //System.out.println(firstWord +" "+secondWord+" "+firstWord+"-"+secondWord);
-            return;
-        }
+        String firstWord = words[0];
+        String secondWord = words[1];
+        String thirdWord = words[2];
+        String fourthWord = words[3];
 
-        // Number - Word  or  Word - Number
-        if ((firstWord.matches("[a-zA-Z]+") && secondWord.matches("[0-9]+"))){
-            term = new Range(firstWord+"-"+secondWord);
-            wordsDict.put(term.finalName,term);
-            //System.out.println(secondWord+" "+firstWord+"-"+secondWord);
-        }
-        if(firstWord.matches("[0-9]+") && secondWord.matches("[a-zA-Z]+")){
-            //System.out.println(firstWord+" "+firstWord+"-"+secondWord);
-            term = new Range(firstWord+"-"+secondWord);
+        if(secondWord.matches("[0-9.]+") && thirdWord.equals("and") && fourthWord.matches("[0-9.]+")){
+            term = new Range(firstWord+"-"+secondWord+"-"+thirdWord+"-"+fourthWord);
+            TMP1.put(term,1);
             wordsDict.put(term.finalName,term);
         }
-
     }
 
     public void kindOfNumber(String [] words) {
@@ -264,6 +265,7 @@ public class ParseUnit {
                     if((numInInt == -1 && numInDouble < 1000) || (numInInt < 1000 && numInDouble ==-1) ){
                         term = new NumberU(words[0]);
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         //.out.println(words[0]);
                         return;
                     }
@@ -283,6 +285,7 @@ public class ParseUnit {
                             }
                         }
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }
                     if((numInDouble>999999 && numInDouble < 1000000000 && numInInt == -1) ||
@@ -301,6 +304,7 @@ public class ParseUnit {
                             }
                         }
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }
                     if((numInDouble>999999999  && numInInt == -1) ||
@@ -319,6 +323,7 @@ public class ParseUnit {
                             }
                         }
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }
                 }
@@ -337,10 +342,12 @@ public class ParseUnit {
                     term = new NumberB(bigNumber+"."+after+"B");
                     //System.out.println(bigNumber+"."+after+"B");
                     wordsDict.put(term.finalName,term);
+                    TMP1.put(term,1);
                 }
                 else {
                     convertNumberToLetter(Integer.parseInt(numberInString), false, true);
                     wordsDict.put(term.finalName,term);
+                    TMP1.put(term,1);
                 }
             } catch (ParseException e) {
                 e.printStackTrace();
@@ -365,6 +372,7 @@ public class ParseUnit {
                     term = new NumberK(numberDouble+"K");
                 //System.out.println(number+"K");
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
                 return;
             }
             if (words[1].equals("Million")){
@@ -374,6 +382,7 @@ public class ParseUnit {
                     term = new NumberM(numberDouble+"M");
                 //System.out.println(number+"M");
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
                 return;
             }
             if (words[1].equals("Billion")){
@@ -383,6 +392,7 @@ public class ParseUnit {
                     term = new NumberB(numberDouble+"B");
                 //System.out.println(number+"B");
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
                 return;
             }
             if (words[1].equals("Trillion")){
@@ -392,12 +402,14 @@ public class ParseUnit {
                     term = new NumberB(numberDouble*1000+"B");
                 //System.out.println(number*1000+"B");
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
                 return;
             }
             // fraction - check if K M B?
             term = new NumberU(words[0]+" "+words[1]);
             //System.out.println(words[0]+" "+words[1]);
             wordsDict.put(term.finalName,term);
+            TMP1.put(term,1);
         }
     }
 
@@ -426,6 +438,7 @@ public class ParseUnit {
                     //System.out.println((number/1000) + "K");
                 }
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
             }
             if(number > 999999 && number < 1000000000){
                 if ( number %1000000 !=0 ){
@@ -437,6 +450,7 @@ public class ParseUnit {
                     //System.out.println((number/1000000) + "M");
                 }
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
             }
             if(number > 999999999){
                 if ( number %1000000000 !=0 ){
@@ -448,6 +462,7 @@ public class ParseUnit {
                     //System.out.println((number/1000000000) + "B");
                 }
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
             }
         }
         return "";
@@ -460,6 +475,7 @@ public class ParseUnit {
         }
         term = new Percent(wordPercent);
         wordsDict.put(term.finalName,term);
+        TMP1.put(term,1);
         //System.out.println(wordPercent);
     }
 
@@ -487,6 +503,7 @@ public class ParseUnit {
             //System.out.println(secondString+"-"+monthInString);
         }
         wordsDict.put(term.finalName,term);
+        TMP1.put(term,1);
 
     }
 
@@ -507,6 +524,7 @@ public class ParseUnit {
             String finalRecord = numberInt + " M Dollars";
             term = new PriceM(finalRecord);
             wordsDict.put(term.finalName,term);
+            TMP1.put(term,1);
             //System.out.println(finalRecord);
             return;
         }
@@ -520,20 +538,24 @@ public class ParseUnit {
                     if(numberInString.length() < 7){
                         term = new Price(words.get(0).substring(1) + " Dollars");
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }else{
                         term = new PriceM(Integer.parseInt(numberInString)/1000000 + " M Dollars");
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }
                 }else{
                     if(numberInString.length() < 8){
                         term = new Price(words.get(0).substring(1) + " Dollars");
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }else {
                         term = new PriceM(Double.parseDouble(numberInString) / 1000000 + " M Dollars");
                         wordsDict.put(term.finalName,term);
+                        TMP1.put(term,1);
                         return;
                     }
                 }
@@ -557,6 +579,7 @@ public class ParseUnit {
             }
             term = new PriceM(finalRecord);
             wordsDict.put(term.finalName,term);
+            TMP1.put(term,1);
             //System.out.println(finalRecord);
             return;
 
@@ -565,6 +588,7 @@ public class ParseUnit {
             //System.out.println(words.get(0) + " " +words.get(1) + " Dollars");
             term = new Price(words.get(0) + " " +words.get(1) + " Dollars");
             wordsDict.put(term.finalName,term);
+            TMP1.put(term,1);
             return;
         }
         NumberFormat format = NumberFormat.getInstance(Locale.US);
@@ -584,6 +608,7 @@ public class ParseUnit {
             if((numberDouble2 == -1 && numberInt2 < 1000000 && numberInt2 >= 0) || (numberInt2 == -1 && numberDouble2 < 1000000 && numberDouble2 >= 0)){
                 term = new Price(words.get(0) + " Dollars");
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
                 //System.out.println(words.get(0) + " Dollars");
             }
             else{
@@ -595,6 +620,7 @@ public class ParseUnit {
                     //System.out.println(numberInt2/1000000 + " M Dollars");
                 }
                 wordsDict.put(term.finalName,term);
+                TMP1.put(term,1);
             }
         } catch (ParseException e) {
             e.printStackTrace();
@@ -654,11 +680,15 @@ public class ParseUnit {
     // for us
     public void printDic(){
         int i=0;
+
         for (String word:wordsDict.keySet()) {
             System.out.println(word);
             i++;
-
         }
+
+        System.out.println("size of dictionary - "+wordsDict.size());
+
+        System.out.println("size of ATerm dictionary - "+TMP1.size());
     }
 
 }

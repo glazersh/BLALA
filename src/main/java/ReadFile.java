@@ -18,6 +18,8 @@ import org.jsoup.select.Elements;
 public class ReadFile {
     ParseUnit p = new ParseUnit();
 
+
+
     public ReadFile(String path) {
         List<File> allFiles = null;
         int counter =0;
@@ -29,7 +31,7 @@ public class ReadFile {
                     Document doc = Jsoup.parse(new String(Files.readAllBytes(file.toPath())));
                     Elements elements = doc.getElementsByTag("DOC");
                     for (Element element : elements) {
-                        if(counter== 0 ) {
+                        if(counter<21) {
                             String docText = element.getElementsByTag("TEXT").text();
                             String docName = element.getElementsByTag("DOCNO").text();
                             String[] withoutSpace = docText.split(" ");
@@ -37,20 +39,33 @@ public class ReadFile {
                             // stemming
                             System.out.println("~~~~~" + docName + "~~~~~~");
                             p.parse(withoutSpace);
-                            counter++;
+                            //counter++;
+
                         }
                         else{
                             break;
                             //counter++;
                         }
                     }
-                    p.printDic();
-                    break;
+
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
+                counter++;
+
+                if(counter==21) {
+                    p.printDic();
+                    break;
+                }
+
+
+
             }
         } catch (IOException e) { }
+
+
+
     }
 
 
