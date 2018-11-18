@@ -1,3 +1,10 @@
+import Term.ATerm;
+import Term.Percent;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class mainParse {
 
 
@@ -5,6 +12,9 @@ public class mainParse {
     public static void main(String [] args){
 
         ParseUnit p = new ParseUnit();
+
+        String [] tmp = {"shula", "dor", "shula", "dor"};
+        p.parse(tmp);
 
         String [] number1 = {"10,123"};
         String [] number2 = {"123","Thousand"};
@@ -73,8 +83,8 @@ public class mainParse {
         String [] hyphen2 = {"step-by-step"};
         p.kindOfHyphen(hyphen2);
 
-       // String [] words = {"shula","Yes"};
-       // p.mappingWords(words);
+        //String [] words = {"1,400"};
+        //p.parse(words);
         System.out.println("~~~~~~~~");
         p.printDic();
         System.out.println();
