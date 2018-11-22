@@ -22,7 +22,7 @@ public class ParseUnit {
     
     Map<ATerm,Integer>TMP1 = new HashMap<>();
     Map<String, ATerm> wordsDict = new HashMap<>();
-    Map<String,Integer>termMap = new HashMap<>();
+    Map<String,Integer>termMap;
     Map<ATerm,Map<String,Integer>> allWordsDic = new HashMap<>();
     Stemmer stem = new Stemmer();
 
@@ -42,7 +42,7 @@ public class ParseUnit {
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("C:\\Users\\User\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -126,6 +126,7 @@ public class ParseUnit {
 
 
     public void parse(String [] allText, String docName){
+        termMap = new HashMap<>();
         wordsInDoc = new HashMap<>();
         List <String>expression = new ArrayList();
 
@@ -138,7 +139,6 @@ public class ParseUnit {
         for(int i=0;i<allText.length;i++){
 
             String word = cutSigns(allText[i]); // cut the signs
-
             if(!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
 
                 // stemmer
@@ -232,14 +232,47 @@ public class ParseUnit {
                 }
             }
         }
+        //need to check also before adding to wordsInDoc
         for(ATerm term:wordsInDoc.keySet()){
-            int counterWord = wordsInDoc.get(term);// how many time the term exist
-            if(allWordsDic.containsKey(term)) {
-                allWordsDic.get(term).put(docName, counterWord);
-            }
-            else{
-                termMap.put(docName,wordsInDoc.get(term));
-                allWordsDic.put(term,termMap);
+            char c = term.finalName.charAt(0);
+            if(Character.isUpperCase(c)){
+                String tp=Character.toLowerCase(c) + term.finalName.substring(1,term.finalName.length());
+                ATerm a = new Word(tp);
+                if(allWordsDic.containsKey(a)){
+                    //check hoe many times appeared in this doc
+                    int counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
+                    allWordsDic.get(a).put(docName, counterWord);
+                }
+                else if (allWordsDic.containsKey(term))
+                {
+                    int counterWord = wordsInDoc.get(term);
+                    allWordsDic.get(term).put(docName, counterWord);
+                }else {
+                    //if do not exist
+                    termMap.put(docName, wordsInDoc.get(term));
+                    allWordsDic.put(term, termMap);
+                }
+            } else {
+                String tp=Character.toUpperCase(term.finalName.charAt(0)) + term.finalName.substring(1, term.finalName.length());
+                ATerm a = new Word(tp);
+                if (allWordsDic.containsKey(a)) {
+                    Map<String,Integer>p;
+                    p = allWordsDic.get(a);
+                    //maybe no need to remove just put
+                    allWordsDic.remove(a);
+                    allWordsDic.put(term,p);
+                    //may not be needed if checking earlier
+                    int counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
+                    allWordsDic.get(term).put(docName, counterWord);
+
+                } else if (allWordsDic.containsKey(term)) {
+                    int counterWord = wordsInDoc.get(term);
+                    allWordsDic.get(term).put(docName, counterWord);
+                } else {
+                    //if do not exist
+                    termMap.put(docName, wordsInDoc.get(term));
+                    allWordsDic.put(term, termMap);
+                }
             }
         }
     }
