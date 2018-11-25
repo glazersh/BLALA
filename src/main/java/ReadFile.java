@@ -27,6 +27,7 @@ public class ReadFile {
                     collect(Collectors.toList());
 
             for (File file : allFiles) {
+                //System.out.println(file.getName());
                 try {
                     FileInputStream fis = new FileInputStream(file);
                     Document doc = Jsoup.parse(new String(Files.readAllBytes(file.toPath())));
@@ -40,7 +41,7 @@ public class ReadFile {
                             String docText = element.getElementsByTag("TEXT").text();
                             String docName = element.getElementsByTag("DOCNO").text();
                             String[] withoutSpaceText = docText.split(" "); // split the text by " "(space) into array
-                            System.out.println("~~~~~" + docName + "~~~~~~");
+                            //System.out.println("~~~~~" + docName + "~~~~~~");
                             Parse.parse(withoutSpaceText, docName);
 
                         }
@@ -48,7 +49,7 @@ public class ReadFile {
                             int doNothing;
                         }
                     }
-                    break;
+                    //break;
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }

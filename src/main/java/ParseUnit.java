@@ -1,4 +1,5 @@
 import Term.*;
+import com.sun.xml.internal.ws.util.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -15,11 +16,8 @@ public class ParseUnit {
     HashSet<String> afterNumber = new HashSet<>();
 
     Set<String> stopWords = new HashSet<>();
-    HashSet<Character>signs = new HashSet<>();
+    Set<Character>signs = new HashSet<>();
 
-
-
-    
     Map<ATerm,Integer>TMP1 = new HashMap<>();
     Map<String, ATerm> wordsDict = new HashMap<>();
     Map<String,Integer>termMap;
@@ -27,8 +25,20 @@ public class ParseUnit {
     Stemmer stem = new Stemmer();
 
     ATerm term;
-    //Map<String,Map>
+    StringBuffer termBeforeChanged;
+
     Map<ATerm,Integer>wordsInDoc;
+
+
+    boolean isTNumber = false;
+    boolean isInteger = true;
+    boolean isTermPrice = false;
+    boolean isTermNumber = false;
+    boolean isTermPercent = false;
+    boolean isTermDate = false;
+    boolean found = false;
+
+
 
 
     public ParseUnit(){
@@ -42,7 +52,7 @@ public class ParseUnit {
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("C:\\Users\\User\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -103,6 +113,8 @@ public class ParseUnit {
         afterNumber.add("trillion");
         afterNumber.add("U.S.");
         afterNumber.add("dollars");
+        afterNumber.add("m");
+        afterNumber.add("bn");
     }
     private void insertSigns(){
         signs.add('.');
@@ -125,61 +137,541 @@ public class ParseUnit {
     }
 
 
+    /**
+     * Check if the string is number
+     * @param str
+     * @return true / false
+     */
+    private boolean isNumber(String str) {
+        if (str == null) {
+            return false;
+        }
+        int length = str.length();
+        int i = 0;
+
+        // set the length and value for highest positive int or lowest negative int
+        int maxlength = 12;
+        String maxnum = String.valueOf(Integer.MAX_VALUE);
+        if (str.length()>1 && str.charAt(0) == '-' ) {
+            maxlength = 13;
+            i = 1;
+            maxnum = String.valueOf(Integer.MIN_VALUE);
+        }
+
+        // verify digit length does not exceed int range
+        if (length > maxlength) {
+            return false;
+        }
+
+        // verify that all characters are numbers
+        if (maxlength == 11 && length == 1) {
+            return false;
+        }
+        int counter = 0;
+        for (int num = i; num < length; num++) {
+            char c = str.charAt(num);
+            if (c < '0' || c > '9') {
+                if(counter==0 &&(c=='.' || c=='/'))
+                    counter++;
+                else
+                    return false;
+
+            }
+        }
+
+        // verify that number value is within int range
+        if (length == maxlength) {
+            for (; i < length; i++) {
+                if (str.charAt(i) < maxnum.charAt(i)) {
+                    return true;
+                }
+                else if (str.charAt(i) > maxnum.charAt(i)) {
+                    return false;
+                }
+            }
+        }
+        isTNumber = true;
+        return true;
+    }
+
+    /**
+     * Remove the comma from the string
+     * @param str
+     * @return string without comma
+     */
+    private String removeComma(String str){
+        StringBuffer newStr = new StringBuffer();
+        for(int i=0;i<str.length();i++){
+            if(str.charAt(i) != ',')
+                newStr.append(str.charAt(i));
+        }
+        return newStr.toString();
+    }
+
+    /**
+     * Check if the string need Special case
+     * @param word
+     * @param second
+     * @return true / false
+     */
+    private boolean isNormalWord(String word, String second){
+        if(isNumber(removeComma(word)))
+            return false;
+        if(word.charAt(0) == '$')
+            return false;
+        if(word.charAt(word.length()-1) == '%')
+            return false;
+        if(month.containsKey(word) && isNumber(second) )
+            return false;
+
+//        if(word.contains("-"))
+//            return false;
+        return true;
+    }
+
+    /**
+     * Term of Price
+     * @param word
+     * @param allTerm
+     * @param isInteger
+     */
+    private void termPrice(String word, String [] allTerm, boolean isInteger){
+        boolean aboveM = true;
+        termBeforeChanged = new StringBuffer(allTerm[0]);
+        switch (allTerm[1]) {
+            case "m":
+            case "million":
+                termBeforeChanged.append(" M Dollars");
+                break;
+            case "bn":
+            case "billion":
+                if (isInteger) {
+                    termBeforeChanged.append("000 M Dollars");
+                }
+                else {
+                    int numD = (int)(Double.parseDouble(word)*1000);
+                    termBeforeChanged.replace(0,allTerm[0].length(),Integer.toString(numD));
+                    termBeforeChanged.append(" M Dollars");
+                }
+                break;
+            case "trillion":
+                if (isInteger) {
+                    termBeforeChanged.append("000000 M Dollars");
+                } else {
+                    int numD = (int)(Double.parseDouble(word)*1000000);
+                    termBeforeChanged.replace(0,allTerm[0].length(),Integer.toString(numD));
+                    termBeforeChanged.append(" M Dollars");
+                }
+                break;
+            case "Dollars" :
+                if(word.contains("/") || Double.parseDouble(word)/1000000<1) {
+                    aboveM = false;
+                    termBeforeChanged.append(" Dollars");
+                }
+                else{
+                    double numD = (Double.parseDouble(word)/1000000);
+                    termBeforeChanged.replace(0,allTerm[0].length(),Double.toString(numD));
+                    termBeforeChanged.append(" M Dollars");
+                }
+                break;
+
+            default :
+                aboveM = false;
+                termBeforeChanged.append(" "+allTerm[1]+" Dollars");
+                break;
+        }
+
+        if(aboveM)
+            term = new PriceM(termBeforeChanged.toString());
+        else
+            term = new Price(termBeforeChanged.toString());
+        increaseCounter(term);
+
+    }
+    private void oneTermPrice(String word, String oneTerm){
+        boolean aboveM = true;
+        termBeforeChanged = new StringBuffer(oneTerm);
+        if(Double.parseDouble(word)/1000000<=1) {
+            aboveM = false;
+            termBeforeChanged.append(" Dollars");
+        }
+        else{
+            double numD = (Double.parseDouble(word)/1000000);
+            termBeforeChanged.replace(0,word.length(),Double.toString(numD));
+            termBeforeChanged.append(" M Dollars");
+        }
+        if(aboveM)
+            term = new PriceM(termBeforeChanged.toString());
+        else
+            term = new Price(termBeforeChanged.toString());
+        increaseCounter(term);
+    }
+
+    /**
+     * Term of Number
+     * @param realword
+     * @param termWords
+     * @param isInteger
+     */
+    private void termNumber(String realword, String[] termWords, boolean isInteger) {
+
+        if(realword.contains("/"))
+            term = new NumberK(realword);
+        else {
+            termBeforeChanged = new StringBuffer(realword);
+            switch (termWords[1]) {
+                case "Thousand": {
+                    termBeforeChanged.append("K");
+                    term = new NumberK(termBeforeChanged.toString());
+                    break;
+                }
+                case "Million": {
+                    termBeforeChanged.append("M");
+                    term = new NumberM(termBeforeChanged.toString());
+                    break;
+                }
+                case "Billion": {
+                    termBeforeChanged.append("B");
+                    term = new NumberB(termBeforeChanged.toString());
+                    break;
+                }
+                case "Trillion": {
+                    termBeforeChanged.append("000B");
+                    term = new NumberB(termBeforeChanged.toString());
+                    break;
+                }
+                default:
+                    termBeforeChanged.append(" " + termWords[1]);
+                    term = new NumberU(termBeforeChanged.toString());
+                    break;
+            }
+        }
+        increaseCounter(term);
+    }
+    private void oneTermNumber(String word, String realWord, boolean isInteger) {
+        if(word.contains("/"))
+            term = new NumberK(word);
+        else {
+            double numberWord = Double.parseDouble(word);
+            // under 1K
+            if (numberWord < 1000) {
+                term = new NumberU(word);
+            } else {
+                // 1k - 1M
+                if (numberWord < 1000000) {
+                    numberWord = numberWord / 1000;
+                    termBeforeChanged = new StringBuffer(numberWord + "K");
+                    term = new NumberK(termBeforeChanged.toString());
+
+                } else {
+                    // 1M - 1B
+                    if (numberWord < 1000000000) {
+                        numberWord = numberWord / 1000000;
+                        termBeforeChanged = new StringBuffer(numberWord + "M");
+                        term = new NumberM(termBeforeChanged.toString());
+                    }
+                    // over 1B
+                    else {
+                        numberWord = numberWord / 1000000000;
+                        termBeforeChanged = new StringBuffer(numberWord + "B");
+                        term = new NumberB(termBeforeChanged.toString());
+                    }
+                }
+            }
+        }
+        increaseCounter(term);
+
+    }
+
+    /**
+     * Term of Date
+     * @param wordsTerm
+     */
+    private void termDate(String [] wordsTerm) {
+        if(month.containsKey(wordsTerm[0])){ // first is month
+            if(wordsTerm[1].length() > 2) { // year
+                termBeforeChanged = new StringBuffer(wordsTerm[1]+"-"+month.get(wordsTerm[0]));
+                term = new DateYear(termBeforeChanged.toString());
+            }
+            else{ // day
+                if(wordsTerm[1].length()!= 1)
+                    termBeforeChanged = new StringBuffer(month.get(wordsTerm[0])+"-"+wordsTerm[1]);
+                else
+                    termBeforeChanged = new StringBuffer(month.get(wordsTerm[0])+"-0"+wordsTerm[1]);
+                term = new DateDay(termBeforeChanged.toString());
+            }
+        }
+        else{ // day
+            if(wordsTerm[1].length() == 1) {
+                termBeforeChanged = new StringBuffer(month.get(wordsTerm[1])+"-0"+wordsTerm[0]);
+            }else{
+                termBeforeChanged = new StringBuffer(month.get(wordsTerm[1])+"-"+wordsTerm[0]);
+            }
+            term = new DateDay(termBeforeChanged.toString());
+        }
+        increaseCounter(term);
+    }
+
+    private boolean isTermNumber(String word){
+        if (isNumber(word)) {
+            if (word.contains(".")) {
+                isInteger = false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void init(){
+        isTNumber = false;
+        isInteger = true;
+        isTermPrice = false;
+        isTermNumber = false;
+        isTermPercent = false;
+        isTermDate = false;
+        found = false;
+    }
+
+
+    private void typeTerm(String [] termWords, String word){
+        // if the term is date
+        if (isTermDate) {
+            termDate(termWords);
+            return;
+        }
+
+        // if the term is price
+        if (isTermPrice) {
+            termPrice(word, termWords, isInteger);
+            return;
+        }
+
+        // if the term is percent
+        if (isTermPercent) {
+            term = new Percent(termBeforeChanged.toString());
+            increaseCounter(term);
+            return;
+        }
+        // the term is number
+        else
+            termNumber(word, termWords, isInteger);
+    }
+    private void oneWordTypeTerm(String word, String real) {
+
+        // if the term is price
+        if (isTermPrice) {
+            oneTermPrice(word, real.substring(1));
+            return;
+        }
+
+        // if the term is percent
+        if (isTermPercent) {
+            term = new Percent(real);
+            increaseCounter(term);
+            return;
+        }
+        //  the term is number
+        if(isTNumber) {
+            oneTermNumber(word, real, isInteger);
+            return;
+        }
+        // is normal string
+        else
+            term = new Word(real);
+    }
+
+    /**
+     * The parser
+     * @param allText
+     * @param docName
+     */
     public void parse(String [] allText, String docName){
         termMap = new HashMap<>();
         wordsInDoc = new HashMap<>();
-        List <String>expression = new ArrayList();
 
-        //Check every words :
-        //  1. cut all the signs in the first and the last character
-        //  2. check if stopWords List contain the word
-        //      2.1 if true, continue
-        //      2.2 else, send to stemmer
-        //
-        for(int i=0;i<allText.length;i++){
+
+        /**
+         * Check every words :
+         *           1. cut all the signs in the first and the last character
+         *           2. check if stopWords List contain the word
+         *               2.1 if true, continue
+         *               2.2 else, send to stemmer
+         */
+        for(int i=0;i<allText.length;i++) {
+
+            init(); // init all boolean variable
+
 
             String word = cutSigns(allText[i]); // cut the signs
-            if(!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
+            //String secondWord = cutSigns(allText[i+1]);
 
-                // stemmer
-                stem.add(word.toCharArray(),word.length());
-                stem.stem();
-                word = stem.toString(); // get the word after the stem
-/*
-                // check if word is number
-                // if true, check if Integer or Double
-                boolean isNumber = false;
-                boolean isInteger = true;
-                if(isWordIsNumber(word)){
-                    isNumber = true;
-                    if(word.contains(".")){
-                        isInteger = false;
-                    }
+            if(word.contains("-") && !word.endsWith("-") && i+1<allText.length && i-1>=0) {
+                word = word;
+                String secondWord = cutSigns(allText[i+1]);
+                String beforeWord = cutSigns(allText[i-1]);
+                if(month.containsKey(secondWord)){
+                    String[] first = {word.split("-")[0],secondWord};
+                    String[] second = {word.split("-")[1],secondWord};
+                    termDate(first);
+                    termDate(second);
+                    i=i+1;
+                    continue;
+
+                }
+                if(month.containsKey(beforeWord)){
+                    boolean ismonth = true;
+                    continue;
+                }
+                else {
+                    term = new Range(word);
+                    increaseCounter(term);
+                    continue;
                 }
 
-                // if word's first character is with ($)Word or last character is Word(%)
-                // and then check if word is Number.
-                if(i+1<allText.length && (word.charAt(0) == '$' || allText[i+1].equals("Dollars") || allText[i+2].equals("Dollars") || allText[i+2].equals("U.S."))) {
-                    if (word.charAt(0) == '$') {
-                        if (isWordIsNumber(word.substring(1))) {
-                            if (word.contains(".")) {
-                                isInteger = false;
+            }
+
+            if((word.length()==1 && !isNumber(word)))
+                continue;
+
+            if (!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
+
+                // regular text
+                if (i+1<allText.length && isNormalWord(word, cutSigns(allText[i+1]))) {
+                    // stemmer
+                    stem.add(word.toCharArray(),word.length());
+                    stem.stem();
+                    term = new Word(stem.toString());
+                    increaseCounter(term);
+                }
+                else {
+                    if(i == allText.length-1){
+                        if(isNormalWord(word,"no")){
+                            term = new Word(word);
+                            increaseCounter(term);
+                            continue;
+                        }
+                    }
+
+                    if (!isTermNumber(word)){
+                        word = removeComma(word);
+                        isTermNumber(word);
+                    }
+
+                    // if word's first character is with "$"
+                    // and then check if word is Number.
+                    if (!isTNumber && word.charAt(0) == '$') {
+                        allText[i] = allText[i].substring(1); // cut $
+                        word = word.substring(1);
+                        if(isTermNumber(word)){
+                            isTermPrice = true;
+                        }
+                        // the number is fraction
+                        if(isTNumber && word.contains("/")){
+                            term = new Price(allText[i] + "Dollars");
+                            increaseCounter(term);
+                            continue;
+                        }
+                        // string that first character is "$"
+                        if(!isTNumber){
+                            term = new Word('$'+allText[i]);
+                            increaseCounter(term);
+                            continue;
+                        }
+                    }
+
+                    // if word's last character is "%"
+                    // and then check if is number
+                    if (!isTNumber && word.charAt(word.length() - 1) == '%') {
+                        word = word.substring(0, word.length() - 1);
+                        if(isTermNumber(word)){
+                            isTermPercent = true;
+                        }
+                        // if number is fraction
+                        if(isTNumber && word.contains("/")){
+                            term = new Price(allText[i]);
+                            increaseCounter(term);
+                            continue;
+                        }
+                        if(!isTNumber){
+                            term = new Word(allText[i]);
+                            increaseCounter(term);
+                            continue;
+                        }
+                    }
+
+                    int next = 0;
+                    String nextWord = "";
+                    if(i+1<allText.length) {
+                        nextWord = cutSigns(allText[i + 1]);
+                    }
+                    while (i + 1 < allText.length && ( afterNumber.contains(nextWord)) || (month.containsKey(word)&& isNumber(nextWord)) || (isTNumber && month.containsKey(nextWord))) {
+                        if(next==2) {
+                            if (!nextWord.equals("U.S.") && !nextWord.contains("/"))
+                                break;
+                        }
+                        next++;
+                        i = i + 1;
+                        if(i+1<allText.length) {
+                            nextWord = cutSigns(allText[i+1]);
+                        }
+                        else
+                            break;
+                    }
+                    i = i - next;
+                    if (next > 0 && i + next < allText.length) {
+                        String[] termWords = new String[next + 1];
+                        for (int j = 0; j < next + 1 ; j++) {
+                            String wordTmp = cutSigns(allText[i + j]);
+                            if(!found) {
+
+                                if ((wordTmp.equals("Dollars") || wordTmp.equals("dollars"))) {
+                                    isTermPrice = true;
+                                    found = true;
+                                }
+                                if ((wordTmp.equals("Thousand") || wordTmp.equals("Million") || wordTmp.equals("Billion") || wordTmp.equals("Trillion"))) {
+                                    isTermNumber = true;
+                                    found = true;
+                                }
+                                if (month.containsKey(wordTmp)) {
+                                    isTermDate = true;
+                                    found = true;
+                                }
+                                if (wordTmp.equals("percent") || wordTmp.equals("percentage")) {
+                                    isTermPercent = true;
+                                    found=true;
+                                    termBeforeChanged = new StringBuffer(word + "%");
+                                }
                             }
+                            termWords[j] = wordTmp;
                         }
+                        typeTerm(termWords, word);
                     }
-
-                }
-                if(word.charAt(word.length()-1) == '%') {
-                    if (isWordIsNumber(word.substring(0, word.length() - 1))) {
-                        if (word.contains(".")) {
-                            isInteger = false;
-                        }
+                    // the term is one word
+                    else {
+                        oneWordTypeTerm(word,cutSigns(allText[i]));
                     }
+                    i = i + next;
                 }
+            }
+        }
+/*
+        // insert to the big dic
+        Map<String,Integer> termMap = new HashMap<>();
+        for(ATerm term:wordsInDoc.keySet()){
+            int counter = wordsInDoc.get(term);
+            if(allWordsDic.containsKey(term)) {
+                allWordsDic.get(term).put(docName, counter);
+            }
+            else{
+                termMap.put(docName,wordsInDoc.get(term));
+                allWordsDic.put(term,termMap);
+            }
+        }
 */
 
 
 
+/*
                 try {
 
                     if(word.charAt(0) == '$' || word.charAt(0) == '%')
@@ -229,9 +721,13 @@ public class ParseUnit {
                         TMP1.put(term, 1);
                     }
 
+
                 }
+
             }
+
         }
+
         //need to check also before adding to wordsInDoc
         for(ATerm term:wordsInDoc.keySet()){
             char c = term.finalName.charAt(0);
@@ -275,7 +771,11 @@ public class ParseUnit {
                 }
             }
         }
+        */
     }
+
+
+
 
     /**
      * Function which updates the counter of the term in the doc
@@ -291,17 +791,6 @@ public class ParseUnit {
         }
     }
 
-    private boolean isWordIsNumber(String word) {
-        if(word.matches("[0-9.]+")){
-            return true;
-        }
-        return false;
-    }
-
-    private void checkIfNumIsInteger(String wordNumber, List exp){
-
-    }
-
     private String cutSigns(String beforeCut) {
         while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(0))) {
             beforeCut = beforeCut.substring(1);
@@ -312,428 +801,6 @@ public class ParseUnit {
         return beforeCut;
     }
 
-    // Hyphen
-    // don't forget to remove  this "-"
-    public void kindOfHyphen(String [] words){
-
-        String firstWord = words[0];
-        String secondWord = words[1];
-        String thirdWord = words[2];
-        String fourthWord = words[3];
-
-        if(secondWord.matches("[0-9.]+") && thirdWord.equals("and") && fourthWord.matches("[0-9.]+")){
-            term = new Range(firstWord+"-"+secondWord+"-"+thirdWord+"-"+fourthWord);
-            TMP1.put(term,1);
-            increaseCounter(term);
-        }
-    }
-
-    public void kindOfNumber(String [] words) {
-        List<String> listOfWords = Arrays.asList(words);
-        // check if the number is a price expression
-        if (listOfWords.contains("Dollars") || listOfWords.contains("U.S.") || listOfWords.contains("dollars") ||
-                words[0].contains("$")) {
-            numberOfPrice(listOfWords);
-            return;
-        }
-        // check if the number is a Date
-        if ((words.length == 2) && (month.containsKey(words[0]) || month.containsKey(words[1]))) {
-            numberOfDate(words);
-            return;
-        }
-        // check if this a percent number
-        if (words[0].contains("%") || listOfWords.contains("percent") || listOfWords.contains("percentage")) {
-            numberOfPercent(words);
-            return;
-        }
-        numOfRegularExpression(words);
-    }
-
-        private void numOfRegularExpression(String [] words){
-        // regular expression
-        if (words.length == 1){
-            NumberFormat format = NumberFormat.getInstance(Locale.US);
-            try {
-                // remove all ","
-                String numberInString = format.parse(words[0]).toString();
-                try
-                {
-                    double numInDouble= -1;
-                    int numInInt = -1;
-                    boolean isDouble = false;
-
-                    if(numberInString.contains(".")){
-                        numInDouble =Double.parseDouble(numberInString);
-                        isDouble = true;
-                    }
-                    else{
-                        numInInt = Integer.parseInt(numberInString);
-                    }
-                    if((numInInt == -1 && numInDouble < 1000) || (numInInt < 1000 && numInDouble ==-1) ){
-                        term = new NumberU(words[0]);
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        //.out.println(words[0]);
-                        return;
-                    }
-                    if((numInDouble>999 && numInDouble < 1000000 && numInInt == -1) ||
-                        numInInt >999 && numInInt < 1000000 && numInDouble == -1) {
-                        if (isDouble) {
-                            term = new NumberK(numInDouble / 1000 + "K");
-                            //System.out.println(numInDouble / 1000 + "K");
-                        }
-                        else {
-                            if(numInInt % 1000 == 0) {
-                                term = new NumberK(numInInt / 1000 + "K");
-                                ///System.out.println(numInInt / 1000 + "K");
-                            }else{
-                                term = new NumberK((double)numInInt / 1000 + "K");
-                                //System.out.println((double)numInInt / 1000 + "K");
-                            }
-                        }
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }
-                    if((numInDouble>999999 && numInDouble < 1000000000 && numInInt == -1) ||
-                            numInInt >999999 && numInInt < 1000000000 && numInDouble == -1) {
-                        if (isDouble) {
-                            term = new NumberK(numInDouble / 1000000 + "M");
-                            //System.out.println(numInDouble / 1000000 + "M");
-                        }
-                        else {
-                            if(numInInt % 1000000 == 0) {
-                                term = new NumberK(numInInt / 1000000 + "M");
-                                //System.out.println(numInInt / 1000000 + "M");
-                            }else{
-                                term = new NumberK((double)numInInt / 1000000 + "M");
-                                //System.out.println((double)numInInt / 1000000 + "M");
-                            }
-                        }
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }
-                    if((numInDouble>999999999  && numInInt == -1) ||
-                            numInInt >999999999 && numInDouble == -1) {
-                        if (isDouble) {
-                            term = new NumberK(numInDouble / 1000000000 + "B");
-                            //System.out.println(numInDouble / 1000000000 + "B");
-                        }
-                        else {
-                            if(numInInt % 1000000000 == 0) {
-                                term = new NumberK(numInInt / 1000000000 + "B");
-                                //System.out.println(numInInt / 1000000000 + "B");
-                            }else{
-                                term = new NumberK((double)numInInt / 1000000000 + "B");
-                                //System.out.println((double)numInInt / 1000000000 + "B");
-                            }
-                        }
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }
-                }
-                catch(NumberFormatException e){}
-
-                if(numberInString.length()>=10){
-                    int size = numberInString.length();
-                    String bigNumber = numberInString.substring(0,size-9);
-                    String after = numberInString.substring(size-9,size-1);
-                    for(int i=after.length()-1;i>=0;i--){
-                        if(after.charAt(i) != '0'){
-                            after=after.substring(0,i+1);
-                            break;
-                        }
-                    }
-                    term = new NumberB(bigNumber+"."+after+"B");
-                    //System.out.println(bigNumber+"."+after+"B");
-                    increaseCounter(term);
-                    TMP1.put(term,1);
-                }
-                else {
-                    convertNumberToLetter(Integer.parseInt(numberInString), false, true);
-                    increaseCounter(term);
-                    TMP1.put(term,1);
-                }
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            boolean isInt = true;
-            int number =0;
-            double numberDouble = 0 ;
-            try{
-                Integer.parseInt(words[0]);
-                number = Integer.parseInt(words[0]);
-            }catch (NumberFormatException e){
-                numberDouble = Double.parseDouble(words[0]);
-                isInt = false;
-            }
-
-            if (words[1].equals("Thousand")){
-                if (isInt)
-                    term = new NumberK(number+"K");
-                else
-                    term = new NumberK(numberDouble+"K");
-                //System.out.println(number+"K");
-                increaseCounter(term);
-                TMP1.put(term,1);
-                return;
-            }
-            if (words[1].equals("Million")){
-                if(isInt)
-                    term = new NumberM(number+"M");
-                else
-                    term = new NumberM(numberDouble+"M");
-                //System.out.println(number+"M");
-                increaseCounter(term);
-                TMP1.put(term,1);
-                return;
-            }
-            if (words[1].equals("Billion")){
-                if(isInt)
-                    term = new NumberB(number+"B");
-                else
-                    term = new NumberB(numberDouble+"B");
-                //System.out.println(number+"B");
-                increaseCounter(term);
-                TMP1.put(term,1);
-                return;
-            }
-            if (words[1].equals("Trillion")){
-                if(isInt)
-                    term = new NumberB(number*1000+"B");
-                else
-                    term = new NumberB(numberDouble*1000+"B");
-                //System.out.println(number*1000+"B");
-                increaseCounter(term);
-                TMP1.put(term,1);
-                return;
-            }
-            // fraction - check if K M B?
-            term = new NumberU(words[0]+" "+words[1]);
-            //System.out.println(words[0]+" "+words[1]);
-            increaseCounter(term);
-            TMP1.put(term,1);
-        }
-    }
-
-    private String convertNumberToLetter(int number, boolean ifPrice, boolean divide) {
-        if (ifPrice){
-            if (number >= 1000000 && divide){
-                if (number % 1000000 != 0){
-                    return (double)number/1000000 +" M";
-                }
-                else{
-                    return number/1000000 +" M";
-                }
-            }
-            else{
-                return number+"" ;
-            }
-        }
-        else{
-            if(number > 999 && number < 1000000){
-                if ( number %1000 !=0 ){
-                    term = new NumberK(((double)number/1000) + "K");
-                    //System.out.println(((double)number/1000) + "K");
-                }
-                else{
-                    term = new NumberK((number/1000) + "K");
-                    //System.out.println((number/1000) + "K");
-                }
-                increaseCounter(term);
-                TMP1.put(term,1);
-            }
-            if(number > 999999 && number < 1000000000){
-                if ( number %1000000 !=0 ){
-                    term = new NumberM(((double)number/1000000) + "M");
-                    //System.out.println(((double)number/1000000) + "M");
-                }
-                else{
-                    term = new NumberM((number/1000000) + "M");
-                    //System.out.println((number/1000000) + "M");
-                }
-                increaseCounter(term);
-                TMP1.put(term,1);
-            }
-            if(number > 999999999){
-                if ( number %1000000000 !=0 ){
-                    term = new NumberB(((double)number/1000000000) + "B");
-                    //System.out.println(((double)number/1000000000) + "B");
-                }
-                else{
-                    term = new NumberB((number/1000000000) + "B");
-                    //System.out.println((number/1000000000) + "B");
-                }
-                increaseCounter(term);
-                TMP1.put(term,1);
-            }
-        }
-        return "";
-    }
-
-    private void numberOfPercent(String[] words) {
-        String wordPercent = words[0];
-        if (!words[0].contains("%")){
-            wordPercent = wordPercent+"%";
-        }
-        term = new Percent(wordPercent);
-        increaseCounter(term);
-        TMP1.put(term,1);
-        //System.out.println(wordPercent);
-    }
-
-    private void numberOfDate(String[] words) {
-        String monthInString = "";
-        String secondString = "";
-        if (month.containsKey(words[0])){
-            monthInString = month.get(words[0]);
-            secondString = words[1];
-        }
-        if (month.containsKey(words[1])){
-            monthInString = month.get(words[1]);
-            secondString = words[0];
-        }
-        if(Integer.parseInt(secondString) < 31){
-            if(Integer.parseInt(secondString) < 10) {
-                if(!secondString.startsWith("0"))
-                secondString = "0"+secondString;
-            }
-            term = new DateDay(monthInString+"-"+secondString);
-            //System.out.println(monthInString+"-"+secondString);
-        }
-        else {
-            term = new DateYear(secondString+"-"+monthInString);
-            //System.out.println(secondString+"-"+monthInString);
-        }
-        increaseCounter(term);
-        TMP1.put(term,1);
-
-    }
-
-    private void numberOfPrice(List<String> words) {
-        int numberInt;
-        if (words.contains("million") || words.contains("billion") || words.contains("trillion")){
-            String numberString = words.get(0);
-            if (numberString.contains("$")) {
-                numberString = numberString.substring(1);
-            }
-            numberInt = Integer.parseInt(numberString);
-            if(words.contains("billion")){
-                numberInt = numberInt*1000;
-            }
-            if(words.contains("trillion")){
-                numberInt*=1000000;
-            }
-            String finalRecord = numberInt + " M Dollars";
-            term = new PriceM(finalRecord);
-            increaseCounter(term);
-            TMP1.put(term,1);
-            //System.out.println(finalRecord);
-            return;
-        }
-        if(words.get(0).contains("$")){
-
-            NumberFormat format = NumberFormat.getInstance(Locale.US);
-            try {
-                // check double !
-                String numberInString = format.parse(words.get(0).substring(1)).toString();
-                if(!numberInString.contains(".")){
-                    if(numberInString.length() < 7){
-                        term = new Price(words.get(0).substring(1) + " Dollars");
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }else{
-                        term = new PriceM(Integer.parseInt(numberInString)/1000000 + " M Dollars");
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }
-                }else{
-                    if(numberInString.length() < 8){
-                        term = new Price(words.get(0).substring(1) + " Dollars");
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }else {
-                        term = new PriceM(Double.parseDouble(numberInString) / 1000000 + " M Dollars");
-                        increaseCounter(term);
-                        TMP1.put(term,1);
-                        return;
-                    }
-                }
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        }
-        if(words.size() > 1 && (words.get(1).equals("m") || words.get(1).equals("bn"))){
-            double numberInDouble;
-            int numberInInt;
-            String finalRecord = words.get(0) + " M Dollars";
-            if(words.get(1).equals("bn")){
-                if(words.get(0).contains(".")){
-                    numberInDouble = Double.parseDouble(words.get(0)) * 1000;
-                    finalRecord = numberInDouble + " M Dollars";
-                }
-                else{
-                    numberInInt = Integer.parseInt(words.get(0)) * 1000;
-                    finalRecord = numberInInt + " M Dollars";
-                }
-            }
-            term = new PriceM(finalRecord);
-            increaseCounter(term);
-            TMP1.put(term,1);
-            //System.out.println(finalRecord);
-            return;
-
-        }
-        if(words.size()>1 && words.get(1).contains("/")){
-            //System.out.println(words.get(0) + " " +words.get(1) + " Dollars");
-            term = new Price(words.get(0) + " " +words.get(1) + " Dollars");
-            increaseCounter(term);
-            TMP1.put(term,1);
-            return;
-        }
-        NumberFormat format = NumberFormat.getInstance(Locale.US);
-        String numberInString = null;
-        double numberDouble2 = -1.0;
-        int numberInt2 = -1;
-        boolean isDouble = false;
-        try {
-            numberInString = format.parse(words.get(0)).toString();
-            if (numberInString.contains(".")){
-                numberDouble2 = Double.parseDouble(numberInString);
-                isDouble = true;
-            }
-            else{
-                numberInt2 = Integer.parseInt(numberInString);
-            }
-            if((numberDouble2 == -1 && numberInt2 < 1000000 && numberInt2 >= 0) || (numberInt2 == -1 && numberDouble2 < 1000000 && numberDouble2 >= 0)){
-                term = new Price(words.get(0) + " Dollars");
-                increaseCounter(term);
-                TMP1.put(term,1);
-                //System.out.println(words.get(0) + " Dollars");
-            }
-            else{
-                if(isDouble){
-                    term = new PriceM(numberDouble2/1000000 + " M Dollars");
-                    //System.out.println(numberDouble2/1000000 + " M Dollars");
-                }else {
-                    term = new PriceM(numberInt2/1000000 + " M Dollars");
-                    //System.out.println(numberInt2/1000000 + " M Dollars");
-                }
-                increaseCounter(term);
-                TMP1.put(term,1);
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        return;
-    }
     // left-to scan the dict again with bigLetter
     public void mappingWords(String [] words){
 
