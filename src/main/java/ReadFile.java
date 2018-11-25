@@ -49,12 +49,11 @@ public class ReadFile {
                             int doNothing;
                         }
                     }
-                    //break;
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
             }
-            int x= 4;
         } catch (IOException e) { }
     }
 
@@ -68,6 +67,7 @@ public class ReadFile {
         //rf.p.printDic();
         long finish = System.nanoTime();
         System.out.println(finish-start);
+        int x=3;
     }
 
 

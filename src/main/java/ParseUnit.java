@@ -485,8 +485,8 @@ public class ParseUnit {
      * @param allText
      * @param docName
      */
-    public void parse(String [] allText, String docName){
-        termMap = new HashMap<>();
+    public void parse(String [] allText, String docName) {
+
         wordsInDoc = new HashMap<>();
 
 
@@ -497,7 +497,7 @@ public class ParseUnit {
          *               2.1 if true, continue
          *               2.2 else, send to stemmer
          */
-        for(int i=0;i<allText.length;i++) {
+        for (int i = 0; i < allText.length; i++) {
 
             init(); // init all boolean variable
 
@@ -505,24 +505,23 @@ public class ParseUnit {
             String word = cutSigns(allText[i]); // cut the signs
             //String secondWord = cutSigns(allText[i+1]);
 
-            if(word.contains("-") && !word.endsWith("-") && i+1<allText.length && i-1>=0) {
+            if (word.contains("-") && !word.endsWith("-") && i + 1 < allText.length && i - 1 >= 0) {
                 word = word;
-                String secondWord = cutSigns(allText[i+1]);
-                String beforeWord = cutSigns(allText[i-1]);
-                if(month.containsKey(secondWord)){
-                    String[] first = {word.split("-")[0],secondWord};
-                    String[] second = {word.split("-")[1],secondWord};
+                String secondWord = cutSigns(allText[i + 1]);
+                String beforeWord = cutSigns(allText[i - 1]);
+                if (month.containsKey(secondWord)) {
+                    String[] first = {word.split("-")[0], secondWord};
+                    String[] second = {word.split("-")[1], secondWord};
                     termDate(first);
                     termDate(second);
-                    i=i+1;
+                    i = i + 1;
                     continue;
 
                 }
-                if(month.containsKey(beforeWord)){
+                if (month.containsKey(beforeWord)) {
                     boolean ismonth = true;
                     continue;
-                }
-                else {
+                } else {
                     term = new Range(word);
                     increaseCounter(term);
                     continue;
@@ -530,29 +529,28 @@ public class ParseUnit {
 
             }
 
-            if((word.length()==1 && !isNumber(word)))
+            if ((word.length() == 1 && !isNumber(word)))
                 continue;
 
             if (!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
 
                 // regular text
-                if (i+1<allText.length && isNormalWord(word, cutSigns(allText[i+1]))) {
+                if (i + 1 < allText.length && isNormalWord(word, cutSigns(allText[i + 1]))) {
                     // stemmer
-                    stem.add(word.toCharArray(),word.length());
+                    stem.add(word.toCharArray(), word.length());
                     stem.stem();
                     term = new Word(stem.toString());
                     increaseCounter(term);
-                }
-                else {
-                    if(i == allText.length-1){
-                        if(isNormalWord(word,"no")){
+                } else {
+                    if (i == allText.length - 1) {
+                        if (isNormalWord(word, "no")) {
                             term = new Word(word);
                             increaseCounter(term);
                             continue;
                         }
                     }
 
-                    if (!isTermNumber(word)){
+                    if (!isTermNumber(word)) {
                         word = removeComma(word);
                         isTermNumber(word);
                     }
@@ -562,18 +560,18 @@ public class ParseUnit {
                     if (!isTNumber && word.charAt(0) == '$') {
                         allText[i] = allText[i].substring(1); // cut $
                         word = word.substring(1);
-                        if(isTermNumber(word)){
+                        if (isTermNumber(word)) {
                             isTermPrice = true;
                         }
                         // the number is fraction
-                        if(isTNumber && word.contains("/")){
+                        if (isTNumber && word.contains("/")) {
                             term = new Price(allText[i] + "Dollars");
                             increaseCounter(term);
                             continue;
                         }
                         // string that first character is "$"
-                        if(!isTNumber){
-                            term = new Word('$'+allText[i]);
+                        if (!isTNumber) {
+                            term = new Word('$' + allText[i]);
                             increaseCounter(term);
                             continue;
                         }
@@ -583,16 +581,16 @@ public class ParseUnit {
                     // and then check if is number
                     if (!isTNumber && word.charAt(word.length() - 1) == '%') {
                         word = word.substring(0, word.length() - 1);
-                        if(isTermNumber(word)){
+                        if (isTermNumber(word)) {
                             isTermPercent = true;
                         }
                         // if number is fraction
-                        if(isTNumber && word.contains("/")){
+                        if (isTNumber && word.contains("/")) {
                             term = new Price(allText[i]);
                             increaseCounter(term);
                             continue;
                         }
-                        if(!isTNumber){
+                        if (!isTNumber) {
                             term = new Word(allText[i]);
                             increaseCounter(term);
                             continue;
@@ -601,28 +599,27 @@ public class ParseUnit {
 
                     int next = 0;
                     String nextWord = "";
-                    if(i+1<allText.length) {
+                    if (i + 1 < allText.length) {
                         nextWord = cutSigns(allText[i + 1]);
                     }
-                    while (i + 1 < allText.length && ( afterNumber.contains(nextWord)) || (month.containsKey(word)&& isNumber(nextWord)) || (isTNumber && month.containsKey(nextWord))) {
-                        if(next==2) {
+                    while (i + 1 < allText.length && (afterNumber.contains(nextWord)) || (month.containsKey(word) && isNumber(nextWord)) || (isTNumber && month.containsKey(nextWord))) {
+                        if (next == 2) {
                             if (!nextWord.equals("U.S.") && !nextWord.contains("/"))
                                 break;
                         }
                         next++;
                         i = i + 1;
-                        if(i+1<allText.length) {
-                            nextWord = cutSigns(allText[i+1]);
-                        }
-                        else
+                        if (i + 1 < allText.length) {
+                            nextWord = cutSigns(allText[i + 1]);
+                        } else
                             break;
                     }
                     i = i - next;
                     if (next > 0 && i + next < allText.length) {
                         String[] termWords = new String[next + 1];
-                        for (int j = 0; j < next + 1 ; j++) {
+                        for (int j = 0; j < next + 1; j++) {
                             String wordTmp = cutSigns(allText[i + j]);
-                            if(!found) {
+                            if (!found) {
 
                                 if ((wordTmp.equals("Dollars") || wordTmp.equals("dollars"))) {
                                     isTermPrice = true;
@@ -638,7 +635,7 @@ public class ParseUnit {
                                 }
                                 if (wordTmp.equals("percent") || wordTmp.equals("percentage")) {
                                     isTermPercent = true;
-                                    found=true;
+                                    found = true;
                                     termBeforeChanged = new StringBuffer(word + "%");
                                 }
                             }
@@ -648,14 +645,12 @@ public class ParseUnit {
                     }
                     // the term is one word
                     else {
-                        oneWordTypeTerm(word,cutSigns(allText[i]));
+                        oneWordTypeTerm(word, cutSigns(allText[i]));
                     }
                     i = i + next;
                 }
             }
         }
-/*
-        // insert to the big dic
         Map<String,Integer> termMap = new HashMap<>();
         for(ATerm term:wordsInDoc.keySet()){
             int counter = wordsInDoc.get(term);
@@ -667,114 +662,85 @@ public class ParseUnit {
                 allWordsDic.put(term,termMap);
             }
         }
-*/
 
 
+    }
 
 /*
-                try {
-
-                    if(word.charAt(0) == '$' || word.charAt(0) == '%')
-                        Integer.parseInt(word.substring(1));
-                    else
-                        Integer.parseInt(word);
-                    expression.add(word);
-                    while (i+1<allText.length && (afterNumber.contains(allText[i + 1]) || month.containsKey(allText[i + 1]))) {
-                        String nextWord = cutSigns(allText[++i]);
-                        expression.add(nextWord);
-                    }
-                    String[] tmp2 = new String[expression.size()];
-                    expression.toArray(tmp2);
-                    kindOfNumber(tmp2);
-                    expression.clear();
-                    continue;
-                } catch (NumberFormatException e) {
-                    try {
-                        if(!word.equals("") && (word.charAt(0) == '$' || word.charAt(word.length()-1) == '%'))
-                            Double.parseDouble(word.substring(1));
-                        else
-                            Double.parseDouble(word);
-                        expression.add(word);
-                        while (i+1<allText.length && (afterNumber.contains(allText[i + 1]) || month.containsKey(allText[i + 1]))) {
-                            String nextWord = cutSigns(allText[++i]);
-                            expression.add(nextWord);
-                            i = i + 1;
-                        }
-                        String[] tmp2 = new String[expression.size()];
-                        expression.toArray(tmp2);
-                        kindOfNumber(tmp2);
-                        expression.clear();
-                        continue;
-                    } catch (NumberFormatException e2) {}
-                    if(i+3 < allText.length && allText[i].equals("Between")){
-                        String[] tmp = new String[4];
-                        tmp[0] = allText[i];
-                        tmp[1] = allText[i+1];
-                        tmp[2] = allText[i+2];
-                        tmp[3] = allText[i+3];
-                        kindOfHyphen(tmp);
-                        i=i+3;
-                    }
-                    else {
-                        term = new Word(word);
-                        increaseCounter(term);
-                        TMP1.put(term, 1);
-                    }
-
-
-                }
-
-            }
-
-        }
-
-        //need to check also before adding to wordsInDoc
         for(ATerm term:wordsInDoc.keySet()){
-            char c = term.finalName.charAt(0);
-            if(Character.isUpperCase(c)){
-                String tp=Character.toLowerCase(c) + term.finalName.substring(1,term.finalName.length());
-                ATerm a = new Word(tp);
-                if(allWordsDic.containsKey(a)){
-                    //check hoe many times appeared in this doc
-                    int counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
-                    allWordsDic.get(a).put(docName, counterWord);
-                }
-                else if (allWordsDic.containsKey(term))
-                {
-                    int counterWord = wordsInDoc.get(term);
-                    allWordsDic.get(term).put(docName, counterWord);
-                }else {
-                    //if do not exist
-                    termMap.put(docName, wordsInDoc.get(term));
-                    allWordsDic.put(term, termMap);
-                }
-            } else {
-                String tp=Character.toUpperCase(term.finalName.charAt(0)) + term.finalName.substring(1, term.finalName.length());
-                ATerm a = new Word(tp);
-                if (allWordsDic.containsKey(a)) {
-                    Map<String,Integer>p;
-                    p = allWordsDic.get(a);
-                    //maybe no need to remove just put
-                    allWordsDic.remove(a);
-                    allWordsDic.put(term,p);
-                    //may not be needed if checking earlier
-                    int counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
-                    allWordsDic.get(term).put(docName, counterWord);
-
-                } else if (allWordsDic.containsKey(term)) {
-                    int counterWord = wordsInDoc.get(term);
-                    allWordsDic.get(term).put(docName, counterWord);
+            if(term instanceof Word ) {
+                char c = term.finalName.charAt(0);
+                int counterWord = 0;
+                if (Character.isUpperCase(c)) {
+                    String tp = Character.toLowerCase(c) + term.finalName.substring(1); // the term with lowerCase
+                    ATerm a = new Word(tp);
+                    if (allWordsDic.containsKey(a)) {
+                        if (allWordsDic.get(a).get(docName) != null) {
+                            //check hoe many times appeared in this doc
+                            counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
+                        } else
+                            counterWord = wordsInDoc.get(term);
+                        allWordsDic.get(a).put(docName, counterWord);
+                    } else
+                        checkIfExistsUpper(docName, term);
                 } else {
-                    //if do not exist
-                    termMap.put(docName, wordsInDoc.get(term));
-                    allWordsDic.put(term, termMap);
+                    String tp = term.finalName.toUpperCase();
+                    ATerm a = new Word(tp);
+                    if (allWordsDic.containsKey(a)) {
+                        Map<String, Integer> p;
+                        p = allWordsDic.get(a);
+                        //maybe no need to remove just put
+                        allWordsDic.remove(a);
+                        allWordsDic.put(term, p);
+                        //may not be needed if checking earlier
+                        if (allWordsDic.get(term).get(docName) != null)
+                            counterWord = wordsInDoc.get(term) + allWordsDic.get(term).get(docName);
+                        else
+                            counterWord = wordsInDoc.get(term);
+                        allWordsDic.get(term).put(docName, counterWord);
+
+                    } else {
+                        checkIfExistsLower(docName, term);
+                    }
                 }
             }
+            else{
+                termMap = new HashMap<>();
+                //if do not exist
+                termMap.put(docName, wordsInDoc.get(term));
+                allWordsDic.put(term, termMap);
+            }
         }
-        */
+
+
+    }
+
+    private void checkIfExistsLower(String docName, ATerm termOld) {
+        if (allWordsDic.containsKey(termOld)) {
+            int counterWord = wordsInDoc.get(termOld);
+            allWordsDic.get(termOld).put(docName, counterWord);
+        } else {
+            termMap = new HashMap<>();
+            //if do not exist
+            termMap.put(docName, wordsInDoc.get(termOld));
+            allWordsDic.put(termOld, termMap);
+        }
     }
 
 
+    private void checkIfExistsUpper(String docName, ATerm termOld) {
+        ATerm termUp = new Word(termOld.finalName.toUpperCase());
+        if (allWordsDic.containsKey(termOld)) {
+            int counterWord = wordsInDoc.get(termOld);
+            allWordsDic.get(termOld).put(docName, counterWord);
+        } else {
+            termMap = new HashMap<>();
+            //if do not exist
+            termMap.put(docName, wordsInDoc.get(termOld));
+            allWordsDic.put(termUp, termMap);
+        }
+    }
+*/
 
 
     /**
@@ -801,69 +767,6 @@ public class ParseUnit {
         return beforeCut;
     }
 
-    // left-to scan the dict again with bigLetter
-    public void mappingWords(String [] words){
-
-        for (String str: words) {
-            char c = str.charAt(0);
-            if(Character.isUpperCase(c)){
-                if(wordsDict.containsKey(Character.toLowerCase(c) + str.substring(1,str.length()))){
-                    //Integer tmp = wordsDict.get((Character.toLowerCase(c) + str.substring(1,str.length())));
-                   // wordsDict.put(Character.toLowerCase(c) + str.substring(1,str.length()), tmp+1);
-                }
-                else if (wordsDict.containsKey(str))
-                {
-                    //Integer tmp = wordsDict.get(str);
-                    //wordsDict.put(str, tmp + 1);
-                }//else
-                    //wordsDict.put(str,1);
-
-            } else {
-                if (wordsDict.containsKey(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()))) {
-                    //Integer tmp = wordsDict.get(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()));
-                    wordsDict.remove(Character.toUpperCase(str.charAt(0)) + str.substring(1, str.length()));
-                    //wordsDict.put(str, tmp + 1);
-                } else if (wordsDict.containsKey(str)) {
-                    //Integer tmp = wordsDict.get(str);
-                    //wordsDict.put(str, tmp + 1);
-                } //else
-                    //wordsDict.put(str, 1);
-
-
-            }
-        }
-        funcEnd();
-        System.out.print(wordsDict);
-
-
-    }
-
-    private void funcEnd(){
-        Iterator it = wordsDict.entrySet().iterator();
-        while(it.hasNext()){
-            Map.Entry pair = (Map.Entry)it.next();
-            if(Character.isUpperCase(pair.getKey().toString().charAt(0))){
-                Integer i = (Integer) pair.getValue();
-                String s = (String) pair.getKey();
-                wordsDict.remove(s);
-                //wordsDict.put(s.toUpperCase(),i);
-            }
-        }
-    }
-
-    // for us
-    public void printDic(){
-        int i=0;
-/*
-        for (String word:wordsDict.keySet()) {
-            System.out.println(word);
-            i++;
-        }
-*/
-        System.out.println("size of dictionary - "+wordsDict.size());
-
-        System.out.println("size of ATerm dictionary - "+TMP1.size());
-    }
 
 }
 

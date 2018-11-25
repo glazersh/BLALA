@@ -13,6 +13,12 @@ public class mainParse {
 
         ParseUnit p = new ParseUnit();
     if(true) {
+
+        String[]text = {"shula", "Dor", "Shula", "Yuli"};
+        p.parse(text,"dd");
+        String[]text1 = {"bla", "dor", "Shula"};
+        p.parse(text1,"cc");
+
         String[] price1 = {"1.7320", "Dollars"};
         String[] price2 = {"22", "3/4", "Dollars"};
         String[] price3 = {"$450,000"};
@@ -106,7 +112,7 @@ public class mainParse {
         //String [] words = {"1,400"};
         //p.parse(words);
         System.out.println("~~~~~~~~");
-        p.printDic();
+
         System.out.println();
     }
 
