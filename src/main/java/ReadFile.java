@@ -53,7 +53,11 @@ public class ReadFile {
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
-                //Parse.post.createPostingFileFirstTime("hey",Parse.allWordsDic);
+                counter++;
+                Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+                Parse.allWordsDic.clear();
+                if(counter==8)
+                    break;
             }
         } catch (IOException e) { }
     }
@@ -64,7 +68,7 @@ public class ReadFile {
         long start = System.nanoTime();
         //ReadFile rf = new ReadFile("C:\\Users\\USER\\Desktop\\search2018\\corpus\\FB496139");
 
-        ReadFile rf = new ReadFile("C:\\Users\\USER\\Desktop\\search2018\\corpus");
+        ReadFile rf = new ReadFile("D:\\documents\\users\\glazersh\\Downloads\\corpus");
         //rf.p.printDic();
         long finish = System.nanoTime();
         System.out.println(finish-start);

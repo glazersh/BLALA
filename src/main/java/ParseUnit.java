@@ -23,6 +23,8 @@ public class ParseUnit {
 
     Map<ATerm,Map<String,Integer>> allWordsDic = new HashMap<>();
 
+    Map<String,Integer> termMap;
+
 
     ATerm term;
     StringBuffer termBeforeChanged;
@@ -52,7 +54,7 @@ public class ParseUnit {
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("C:\\Users\\glazersh\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -662,6 +664,7 @@ public class ParseUnit {
                 }
             }
         }
+
         Map<String,Integer> termMap = new HashMap<>();
         for(ATerm term:wordsInDoc.keySet()){
             int counter = wordsInDoc.get(term);
@@ -680,6 +683,7 @@ public class ParseUnit {
 
 
     }
+
 
 /*
         for(ATerm term:wordsInDoc.keySet()){
@@ -745,9 +749,9 @@ public class ParseUnit {
 
     private void checkIfExistsUpper(String docName, ATerm termOld) {
         ATerm termUp = new Word(termOld.finalName.toUpperCase());
-        if (allWordsDic.containsKey(termOld)) {
+        if (allWordsDic.containsKey(termUp)) {
             int counterWord = wordsInDoc.get(termOld);
-            allWordsDic.get(termOld).put(docName, counterWord);
+            allWordsDic.get(termUp).put(docName, counterWord);
         } else {
             termMap = new HashMap<>();
             //if do not exist
@@ -755,7 +759,7 @@ public class ParseUnit {
             allWordsDic.put(termUp, termMap);
         }
     }
-*/
+
 
 
     /**

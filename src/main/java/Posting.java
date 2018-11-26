@@ -16,11 +16,12 @@ public class Posting {
     public Posting() {
     }
 
-    public void createPostingFileFirstTime(String docName, Map<ATerm, Map<String,Integer>> words) {
-        File file = new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\java\\postings" + "\\postFile" + (numberOfFile++) + "");
+    public void createPostingFileFirstTime(Map<ATerm, Map<String,Integer>> words) {
+        File file = new File("C:\\Users\\glazersh\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\post" + (numberOfFile++) + "");
         try {
             file.createNewFile();
             writeToFile(words, file);
+            allfiles.add(file);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -53,7 +54,7 @@ public class Posting {
         for (ATerm term : wordsInDictionary.keySet()) {
             docNumber = new StringBuffer();
             for(String docName:wordsInDictionary.get(term).keySet()){
-                docNumber.append("["+docName+"-"+wordsInDictionary.get(term).get(docName)+"]");
+                docNumber.append("["+docName+":"+wordsInDictionary.get(term).get(docName)+"]");
             }
             wordsInfo.append(term.finalName + docNumber+"\n"); // # number of [ is doc frequency (df), idf
 
@@ -61,7 +62,8 @@ public class Posting {
         try {
             FileOutputStream out = new FileOutputStream(file);
             try {
-                Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
+                //Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
+                Writer writer = new OutputStreamWriter(out);
                 try {
                     writer.write(wordsInfo.toString());
                 } catch (IOException e) {
