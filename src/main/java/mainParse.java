@@ -14,7 +14,7 @@ public class mainParse {
         ParseUnit p = new ParseUnit();
     if(true) {
 
-        String[]text = {"shula", "Dor", "Shula", "Yuli"};
+        String[]text = {"Between", "6-8"};
         p.parse(text,"dd");
         String[]text1 = {"bla", "dor", "Shula"};
         p.parse(text1,"cc");

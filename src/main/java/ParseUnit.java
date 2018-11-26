@@ -11,18 +11,18 @@ import static jdk.nashorn.internal.runtime.JSType.isNumber;
 
 public class ParseUnit {
 
+    Posting post = new Posting();
+    Stemmer stem = new Stemmer();
+
+
     Map<String,String> month= new HashMap<>();
-    Map<String, Map> fileDict = new HashMap<>();
     HashSet<String> afterNumber = new HashSet<>();
 
     Set<String> stopWords = new HashSet<>();
     Set<Character>signs = new HashSet<>();
 
-    Map<ATerm,Integer>TMP1 = new HashMap<>();
-    Map<String, ATerm> wordsDict = new HashMap<>();
-    Map<String,Integer>termMap;
     Map<ATerm,Map<String,Integer>> allWordsDic = new HashMap<>();
-    Stemmer stem = new Stemmer();
+
 
     ATerm term;
     StringBuffer termBeforeChanged;
@@ -237,7 +237,7 @@ public class ParseUnit {
      */
     private void termPrice(String word, String [] allTerm, boolean isInteger){
         boolean aboveM = true;
-        termBeforeChanged = new StringBuffer(allTerm[0]);
+        termBeforeChanged = new StringBuffer(word);
         switch (allTerm[1]) {
             case "m":
             case "million":
@@ -311,9 +311,8 @@ public class ParseUnit {
      * Term of Number
      * @param realword
      * @param termWords
-     * @param isInteger
      */
-    private void termNumber(String realword, String[] termWords, boolean isInteger) {
+    private void termNumber(String realword, String[] termWords) {
 
         if(realword.contains("/"))
             term = new NumberK(realword);
@@ -348,7 +347,7 @@ public class ParseUnit {
         }
         increaseCounter(term);
     }
-    private void oneTermNumber(String word, String realWord, boolean isInteger) {
+    private void oneTermNumber(String word) {
         if(word.contains("/"))
             term = new NumberK(word);
         else {
@@ -454,7 +453,7 @@ public class ParseUnit {
         }
         // the term is number
         else
-            termNumber(word, termWords, isInteger);
+            termNumber(word, termWords);
     }
     private void oneWordTypeTerm(String word, String real) {
 
@@ -472,7 +471,7 @@ public class ParseUnit {
         }
         //  the term is number
         if(isTNumber) {
-            oneTermNumber(word, real, isInteger);
+            oneTermNumber(word);
             return;
         }
         // is normal string
@@ -505,7 +504,19 @@ public class ParseUnit {
             String word = cutSigns(allText[i]); // cut the signs
             //String secondWord = cutSigns(allText[i+1]);
 
-            if (word.contains("-") && !word.endsWith("-") && i + 1 < allText.length && i - 1 >= 0) {
+            if ((i + 3 < allText.length && word.equals("Between")) || ((word.contains("-") && !word.endsWith("-") && i - 1 >= 0 && i+1 <allText.length))) {
+                if(word.equals("Between")){
+                        String num1 = cutSigns(allText[i+1]);
+                        String and = cutSigns(allText[i+2]);
+                        String num2 = cutSigns(allText[i+3]);
+                    if(isNumber(num1) && isNumber(num2) && and.equals("and")) {
+                        term = new Range(num1+"-"+num2);
+                        i=i+3;
+                        increaseCounter(term);
+                        continue;
+                    }
+                    continue;
+                }
                 word = word;
                 String secondWord = cutSigns(allText[i + 1]);
                 String beforeWord = cutSigns(allText[i - 1]);
@@ -662,6 +673,10 @@ public class ParseUnit {
                 allWordsDic.put(term,termMap);
             }
         }
+        //Thread t = new Thread(()->post.createPostingFileFirstTime(docName,wordsInDoc));
+        //t.start();
+
+        //post.createPostingFileFirstTime(docName, wordsInDoc);
 
 
     }

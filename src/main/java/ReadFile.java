@@ -18,7 +18,7 @@ public class ReadFile {
 
     public ReadFile(String path) {
         List<File> allFiles = null;
-        //int counter =0;
+        int counter =0;
         try {
             // Read all files from path
             allFiles = Files.walk(Paths.get(path)).
@@ -53,6 +53,7 @@ public class ReadFile {
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
+                //Parse.post.createPostingFileFirstTime("hey",Parse.allWordsDic);
             }
         } catch (IOException e) { }
     }
