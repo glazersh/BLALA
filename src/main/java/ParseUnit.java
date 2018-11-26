@@ -136,6 +136,7 @@ public class ParseUnit {
         signs.add('+');
         signs.add('"');
         signs.add('*');
+        signs.add(' ');
     }
 
 
@@ -684,8 +685,8 @@ public class ParseUnit {
 
     }
 
-
 /*
+
         for(ATerm term:wordsInDoc.keySet()){
             if(term instanceof Word ) {
                 char c = term.finalName.charAt(0);
