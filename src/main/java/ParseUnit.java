@@ -19,7 +19,7 @@ public class ParseUnit {
     HashSet<String> afterNumber = new HashSet<>();
 
     Set<String> stopWords = new HashSet<>();
-    Set<Character>signs = new HashSet<>();
+    Set<String>signs = new HashSet<>();
 
     Map<ATerm,Map<String,Integer>> allWordsDic = new HashMap<>();
 
@@ -54,7 +54,7 @@ public class ParseUnit {
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("C:\\Users\\glazersh\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("D:\\documents\\users\\dorlev\\Downloads\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -119,24 +119,29 @@ public class ParseUnit {
         afterNumber.add("bn");
     }
     private void insertSigns(){
-        signs.add('.');
-        signs.add(',');
-        signs.add(';');
-        signs.add('(');
-        signs.add('{');
-        signs.add('[');
-        signs.add(')');
-        signs.add('}');
-        signs.add(']');
-        signs.add(':');
-        signs.add('!');
-        signs.add('?');
-        signs.add('`');
-        signs.add('|');
-        signs.add('+');
-        signs.add('"');
-        signs.add('*');
-        signs.add(' ');
+        signs.add(".");
+        signs.add(",");
+        signs.add(";");
+        signs.add("(");
+        signs.add("{");
+        signs.add("[");
+        signs.add(")");
+        signs.add("}");
+        signs.add("]");
+        signs.add(":");
+        signs.add("!");
+        signs.add("?");
+        signs.add("`");
+        signs.add("|");
+        signs.add("+");
+        signs.add("'");
+        signs.add("*");
+        signs.add(" ");
+        signs.add("#");
+        signs.add("/");
+        signs.add("--");
+        signs.add(""+'"');
+
     }
 
 
@@ -174,7 +179,7 @@ public class ParseUnit {
         for (int num = i; num < length; num++) {
             char c = str.charAt(num);
             if (c < '0' || c > '9') {
-                if(counter==0 &&(c=='.' || c=='/'))
+                if(counter==0 && ((c=='.' || c=='/') && length!=1))
                     counter++;
                 else
                     return false;
@@ -354,6 +359,9 @@ public class ParseUnit {
         if(word.contains("/"))
             term = new NumberK(word);
         else {
+            if(word.contains(".")){
+                int x=4;
+            }
             double numberWord = Double.parseDouble(word);
             // under 1K
             if (numberWord < 1000) {
@@ -507,6 +515,7 @@ public class ParseUnit {
             String word = cutSigns(allText[i]); // cut the signs
             //String secondWord = cutSigns(allText[i+1]);
 
+
             if ((i + 3 < allText.length && word.equals("Between")) || ((word.contains("-") && !word.endsWith("-") && i - 1 >= 0 && i+1 <allText.length))) {
                 if(word.equals("Between")){
                         String num1 = cutSigns(allText[i+1]);
@@ -533,9 +542,21 @@ public class ParseUnit {
 
                 }
                 if (month.containsKey(beforeWord)) {
-                    boolean ismonth = true;
+                    term = new Range(word);
+                    increaseCounter(term);
                     continue;
                 } else {
+                    if(word.startsWith("-") && !isNumber(word.substring(1))){
+                        if(!stopWords.contains(word.substring(1))){
+                            stem.add(word.toCharArray(), word.length());
+                            stem.stem();
+                            term=new Word(word.substring(1));
+                            increaseCounter(term);
+                        }
+                        continue;
+
+                    }
+                    /// here
                     term = new Range(word);
                     increaseCounter(term);
                     continue;
@@ -543,8 +564,10 @@ public class ParseUnit {
 
             }
 
+
             if ((word.length() == 1 && !isNumber(word)))
                 continue;
+
 
             if (!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
 
@@ -558,6 +581,8 @@ public class ParseUnit {
                 } else {
                     if (i == allText.length - 1) {
                         if (isNormalWord(word, "no")) {
+                            stem.add(word.toCharArray(), word.length());
+                            stem.stem();
                             term = new Word(word);
                             increaseCounter(term);
                             continue;
@@ -665,7 +690,7 @@ public class ParseUnit {
                 }
             }
         }
-
+/*
         Map<String,Integer> termMap = new HashMap<>();
         for(ATerm term:wordsInDoc.keySet()){
             int counter = wordsInDoc.get(term);
@@ -685,7 +710,7 @@ public class ParseUnit {
 
     }
 
-/*
+*/
 
         for(ATerm term:wordsInDoc.keySet()){
             if(term instanceof Word ) {
@@ -738,7 +763,12 @@ public class ParseUnit {
     private void checkIfExistsLower(String docName, ATerm termOld) {
         if (allWordsDic.containsKey(termOld)) {
             int counterWord = wordsInDoc.get(termOld);
-            allWordsDic.get(termOld).put(docName, counterWord);
+            if(allWordsDic.get(termOld).get(docName)==null){
+                allWordsDic.get(termOld).put(docName, counterWord);
+            }else{
+                counterWord = wordsInDoc.get(termOld)+allWordsDic.get(termOld).get(docName);
+                allWordsDic.get(termOld).put(docName, counterWord);
+            }
         } else {
             termMap = new HashMap<>();
             //if do not exist
@@ -752,7 +782,12 @@ public class ParseUnit {
         ATerm termUp = new Word(termOld.finalName.toUpperCase());
         if (allWordsDic.containsKey(termUp)) {
             int counterWord = wordsInDoc.get(termOld);
-            allWordsDic.get(termUp).put(docName, counterWord);
+            if(allWordsDic.get(termUp).get(docName)==null){
+                allWordsDic.get(termUp).put(docName, counterWord);
+            }else {
+                counterWord = wordsInDoc.get(termOld) + allWordsDic.get(termUp).get(docName);
+                allWordsDic.get(termUp).put(docName, counterWord);
+            }
         } else {
             termMap = new HashMap<>();
             //if do not exist
@@ -778,12 +813,28 @@ public class ParseUnit {
     }
 
     private String cutSigns(String beforeCut) {
-        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(0))) {
+
+        while (beforeCut.length()>1 && beforeCut.startsWith("-") &&!Character.isDigit(beforeCut.charAt(1))) {
             beforeCut = beforeCut.substring(1);
         }
-        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(beforeCut.length()-1))) {
+        while(beforeCut.endsWith("-")){
+            beforeCut=beforeCut.substring(0,beforeCut.length()-1);
+        }
+
+
+        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(0)+"")) {
+            beforeCut = beforeCut.substring(1);
+        }
+        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(beforeCut.length()-1)+"")) {
             beforeCut = beforeCut.substring(0,beforeCut.length()-1);
         }
+        while (beforeCut.length()>1 && beforeCut.startsWith("-") &&!Character.isDigit(beforeCut.charAt(1))) {
+            beforeCut = beforeCut.substring(1);
+        }
+        while(beforeCut.endsWith("-")){
+            beforeCut=beforeCut.substring(0,beforeCut.length()-1);
+        }
+
         return beforeCut;
     }
 

@@ -59,12 +59,11 @@ public class ReadFile {
                     e.printStackTrace();
                 }
                 counter++;
-                if(counter==1) {
-                    Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
-                    Parse.allWordsDic.clear();
-                    counter=0;
+                Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+                Parse.allWordsDic.clear();
+                if(counter==16)
                     break;
-                }
+
 
 
             }
@@ -77,7 +76,7 @@ public class ReadFile {
         long start = System.nanoTime();
         //ReadFile rf = new ReadFile("C:\\Users\\USER\\Desktop\\search2018\\corpus\\FB496139");
 
-        ReadFile rf = new ReadFile("D:\\documents\\users\\glazersh\\Downloads\\corpus");
+        ReadFile rf = new ReadFile("D:\\documents\\users\\dorlev\\Downloads\\corpus");
         //rf.p.printDic();
         long finish = System.nanoTime();
         System.out.println(finish-start);
