@@ -24,6 +24,7 @@ public class ReadFile {
     public ReadFile(String path) {
         List<File> allFiles = null;
         int counter =0;
+        int numFiles =0;
         try {
             // Read all files from path
             allFiles = Files.walk(Paths.get(path)).
@@ -66,19 +67,20 @@ public class ReadFile {
                 }
                 counter++;
 
-                if(counter==50){
-                    Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+                if(counter==2){
+                    //Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
                     Parse.allWordsDic.clear();
                     Parse.post.writePerDoc(Parse.docInfo);
                     Parse.docInfo.clear();
                     counter = 0;
+                    System.out.println("insert 2 Files #" + ++numFiles);
                 }
 
 
 
 
             }
-            Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+            //Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
             Parse.allWordsDic.clear();
             Parse.post.createFileWithAllTerms(Parse.allTerm);
         } catch (IOException e) { }
