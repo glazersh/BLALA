@@ -1,8 +1,11 @@
+import IO.CountryInMemoryDB;
+import IO.CountryInfo;
 import Term.*;
 import com.sun.xml.internal.ws.util.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.*;
@@ -25,11 +28,21 @@ public class ParseUnit {
 
     Map<String,Integer> termMap;
 
+    Map<String,String> docInfo = new HashMap<>();
 
     ATerm term;
     StringBuffer termBeforeChanged;
 
-    Map<ATerm,Integer>wordsInDoc;
+    Map<ATerm,Integer>wordsInDoc = new HashMap<>();
+
+    CountryInMemoryDB countryInMemory;
+    Map<CountryInfo,String> capitalTerms = new HashMap<>();
+
+    HashSet<String> allTerm = new HashSet<>();
+    int maxTermCounter;
+    int minTermCounter;
+    int counterMinTerm;
+    String commonTerm = "";
 
 
     boolean isTNumber = false;
@@ -48,13 +61,18 @@ public class ParseUnit {
         insertAfterWords(); // init special words for our parse
         StopWords(); // init all stopWords from stopWords.txt
         insertSigns(); // init all the signs
+        try {
+            countryInMemory = new CountryInMemoryDB("https://restcountries.eu/rest/v2/all?fields=name;capital;population;currencies");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void StopWords(){
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("D:\\documents\\users\\dorlev\\Downloads\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -138,7 +156,9 @@ public class ParseUnit {
         signs.add("*");
         signs.add(" ");
         signs.add("#");
+        signs.add("=");//
         signs.add("/");
+        signs.add("@");
         signs.add("--");
         signs.add(""+'"');
 
@@ -495,8 +515,11 @@ public class ParseUnit {
      * @param allText
      * @param docName
      */
-    public void parse(String [] allText, String docName) {
-
+    public void parse(String [] allText, String docName,String cityName) {
+        maxTermCounter = 0;
+        counterMinTerm = 0;
+        minTermCounter = 100;
+        String commonTerm = "";
         wordsInDoc = new HashMap<>();
 
 
@@ -529,7 +552,6 @@ public class ParseUnit {
                     }
                     continue;
                 }
-                word = word;
                 String secondWord = cutSigns(allText[i + 1]);
                 String beforeWord = cutSigns(allText[i - 1]);
                 if (month.containsKey(secondWord)) {
@@ -597,6 +619,11 @@ public class ParseUnit {
                     // if word's first character is with "$"
                     // and then check if word is Number.
                     if (!isTNumber && word.charAt(0) == '$') {
+
+                        if(word.equals("$1=Y124")){
+                            int x=4;
+                        }
+
                         allText[i] = allText[i].substring(1); // cut $
                         word = word.substring(1);
                         if (isTermNumber(word)) {
@@ -610,7 +637,19 @@ public class ParseUnit {
                         }
                         // string that first character is "$"
                         if (!isTNumber) {
-                            term = new Word('$' + allText[i]);
+                            boolean flag = false;
+                            for(int charW = 0; charW<word.length()-1;charW++){
+                                if(signs.contains(word.charAt(charW)+"")&& !Character.isDigit(word.charAt(charW+1))){
+                                    int x=4;
+                                    flag = true;
+                                    break;
+                                }
+                            }
+                            if(flag)
+                                continue;
+
+
+                            term = new Word('$' + word);
                             increaseCounter(term);
                             continue;
                         }
@@ -625,12 +664,24 @@ public class ParseUnit {
                         }
                         // if number is fraction
                         if (isTNumber && word.contains("/")) {
-                            term = new Price(allText[i]);
+                            term = new Percent(word);
                             increaseCounter(term);
                             continue;
                         }
                         if (!isTNumber) {
-                            term = new Word(allText[i]);
+
+                            boolean flag = false;
+                            for(int charW = 0; charW<word.length()-1;charW++){
+                                if(signs.contains(word.charAt(charW)+"")&& !Character.isDigit(word.charAt(charW+1))){
+                                    int x=4;
+                                    flag = true;
+                                    break;
+                                }
+                            }
+                            if(flag)
+                                continue;
+
+                            term = new Word(word);
                             increaseCounter(term);
                             continue;
                         }
@@ -690,29 +741,9 @@ public class ParseUnit {
                 }
             }
         }
-/*
-        Map<String,Integer> termMap = new HashMap<>();
-        for(ATerm term:wordsInDoc.keySet()){
-            int counter = wordsInDoc.get(term);
-            if(allWordsDic.containsKey(term)) {
-                allWordsDic.get(term).put(docName, counter);
-            }
-            else{
-                termMap.put(docName,wordsInDoc.get(term));
-                allWordsDic.put(term,termMap);
-            }
-        }
-        //Thread t = new Thread(()->post.createPostingFileFirstTime(docName,wordsInDoc));
-        //t.start();
-
-        //post.createPostingFileFirstTime(docName, wordsInDoc);
-
-
-    }
-
-*/
 
         for(ATerm term:wordsInDoc.keySet()){
+
             if(term instanceof Word ) {
                 char c = term.finalName.charAt(0);
                 int counterWord = 0;
@@ -725,6 +756,18 @@ public class ParseUnit {
                             counterWord = wordsInDoc.get(term) + allWordsDic.get(a).get(docName);
                         } else
                             counterWord = wordsInDoc.get(term);
+                        // max
+                        if(maxTermCounter<counterWord){
+                            maxTermCounter = counterWord;
+                            commonTerm = term.finalName;
+                        }
+                        // min
+                        if(minTermCounter>counterWord){
+                            minTermCounter = counterWord;
+                            counterMinTerm=0;
+                            counterMinTerm++;
+                        }
+
                         allWordsDic.get(a).put(docName, counterWord);
                     } else
                         checkIfExistsUpper(docName, term);
@@ -736,12 +779,25 @@ public class ParseUnit {
                         p = allWordsDic.get(a);
                         //maybe no need to remove just put
                         allWordsDic.remove(a);
+                        checkCapital(term.finalName);
                         allWordsDic.put(term, p);
                         //may not be needed if checking earlier
                         if (allWordsDic.get(term).get(docName) != null)
                             counterWord = wordsInDoc.get(term) + allWordsDic.get(term).get(docName);
                         else
                             counterWord = wordsInDoc.get(term);
+                        // max
+                        if(maxTermCounter<counterWord){
+                            maxTermCounter = counterWord;
+                            commonTerm = term.finalName;
+                        }
+                        // min
+                        if(minTermCounter>counterWord){
+                            minTermCounter = counterWord;
+                            counterMinTerm=0;
+                            counterMinTerm++;
+                        }
+
                         allWordsDic.get(term).put(docName, counterWord);
 
                     } else {
@@ -751,11 +807,34 @@ public class ParseUnit {
             }
             else{
                 termMap = new HashMap<>();
+                // max
+                if(maxTermCounter<wordsInDoc.get(term)){
+                    maxTermCounter = wordsInDoc.get(term);
+                    commonTerm = term.finalName;
+                }
+                if(minTermCounter==wordsInDoc.get(term)){
+                    counterMinTerm++;
+                }
+                // min
+                if(minTermCounter>wordsInDoc.get(term)){
+                    minTermCounter = wordsInDoc.get(term);
+                    counterMinTerm=0;
+                    counterMinTerm++;
+                }
+
                 //if do not exist
                 termMap.put(docName, wordsInDoc.get(term));
+                checkCapital(term.finalName);
                 allWordsDic.put(term, termMap);
             }
         }
+
+
+        //// Finish
+        docInfo.put(docName,maxTermCounter+","+wordsInDoc.size()+","+counterMinTerm+","+cityName);
+        //post.writePerDoc(docName,cityName,wordsInDoc.size(),maxTermCounter,counterMinTerm);
+
+
 
 
     }
@@ -764,15 +843,59 @@ public class ParseUnit {
         if (allWordsDic.containsKey(termOld)) {
             int counterWord = wordsInDoc.get(termOld);
             if(allWordsDic.get(termOld).get(docName)==null){
+                // max
+                if(maxTermCounter<counterWord){
+                    maxTermCounter = counterWord;
+                    commonTerm = term.finalName;
+                }
+                //min
+                if(minTermCounter==counterWord){
+                    counterMinTerm++;
+                }
+                if(minTermCounter>counterWord){
+                    minTermCounter = counterWord;
+                    counterMinTerm = 0;
+                    counterMinTerm++;
+                }
+
                 allWordsDic.get(termOld).put(docName, counterWord);
             }else{
                 counterWord = wordsInDoc.get(termOld)+allWordsDic.get(termOld).get(docName);
+
+                if(maxTermCounter<counterWord){
+                    maxTermCounter = counterWord;
+                    commonTerm = term.finalName;
+                }
+                if(minTermCounter==counterWord){
+                    counterMinTerm++;
+                }
+                if(minTermCounter>counterWord){
+                    minTermCounter = counterWord;
+                    counterMinTerm=0;
+                    counterMinTerm++;
+                }
+
                 allWordsDic.get(termOld).put(docName, counterWord);
             }
         } else {
             termMap = new HashMap<>();
+
+            if(maxTermCounter<wordsInDoc.get(termOld)){
+                maxTermCounter = wordsInDoc.get(termOld);
+                commonTerm = term.finalName;
+            }
+            if(minTermCounter==wordsInDoc.get(termOld)){
+                counterMinTerm++;
+            }
+            if(minTermCounter>wordsInDoc.get(termOld)){
+                minTermCounter = wordsInDoc.get(termOld);
+                counterMinTerm=0;
+                counterMinTerm++;
+            }
+
             //if do not exist
             termMap.put(docName, wordsInDoc.get(termOld));
+            checkCapital(termOld.finalName);
             allWordsDic.put(termOld, termMap);
         }
     }
@@ -782,16 +905,62 @@ public class ParseUnit {
         ATerm termUp = new Word(termOld.finalName.toUpperCase());
         if (allWordsDic.containsKey(termUp)) {
             int counterWord = wordsInDoc.get(termOld);
+
             if(allWordsDic.get(termUp).get(docName)==null){
+
+                if(maxTermCounter<wordsInDoc.get(termOld)){
+                    maxTermCounter = wordsInDoc.get(termOld);
+                    commonTerm = term.finalName;
+                }
+                if(minTermCounter==wordsInDoc.get(termOld)){
+                    counterMinTerm++;
+                }
+                if(minTermCounter>wordsInDoc.get(termOld)){
+                    minTermCounter = wordsInDoc.get(termOld);
+                    counterMinTerm=0;
+                    counterMinTerm++;
+                }
+
+
                 allWordsDic.get(termUp).put(docName, counterWord);
-            }else {
+            }
+            else {
                 counterWord = wordsInDoc.get(termOld) + allWordsDic.get(termUp).get(docName);
+
+                if(maxTermCounter<counterWord){
+                    maxTermCounter = wordsInDoc.get(termOld);
+                    commonTerm = term.finalName;
+                }
+                if(minTermCounter==counterWord){
+                    counterMinTerm++;
+                }
+                if(minTermCounter>counterWord){
+                    minTermCounter = wordsInDoc.get(termOld);
+                    counterMinTerm=0;
+                    counterMinTerm++;
+                }
+
                 allWordsDic.get(termUp).put(docName, counterWord);
             }
         } else {
             termMap = new HashMap<>();
             //if do not exist
+
+            if(maxTermCounter<wordsInDoc.get(termOld)){
+                maxTermCounter = wordsInDoc.get(termOld);
+                commonTerm = term.finalName;
+            }
+            if(minTermCounter==wordsInDoc.get(termOld)){
+                counterMinTerm++;
+            }
+            if(minTermCounter>wordsInDoc.get(termOld)){
+                minTermCounter = wordsInDoc.get(termOld);
+                counterMinTerm=0;
+                counterMinTerm++;
+            }
+
             termMap.put(docName, wordsInDoc.get(termOld));
+            checkCapital(termUp.finalName);
             allWordsDic.put(termUp, termMap);
         }
     }
@@ -804,11 +973,19 @@ public class ParseUnit {
      * @param term
      */
     private void increaseCounter(ATerm term){
+
+        if(term.finalName.contains("`")) {
+            int x = 4;
+        }
+
         if(wordsInDoc.containsKey(term)) {
             Integer tmp = wordsInDoc.get(term);
             wordsInDoc.put(term, tmp + 1);
         }else{
             wordsInDoc.put(term,1);
+        }
+        if(!allTerm.contains(term.finalName.toLowerCase())){
+            allTerm.add(term.finalName.toLowerCase());
         }
     }
 
@@ -820,7 +997,6 @@ public class ParseUnit {
         while(beforeCut.endsWith("-")){
             beforeCut=beforeCut.substring(0,beforeCut.length()-1);
         }
-
 
         while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(0)+"")) {
             beforeCut = beforeCut.substring(1);
@@ -836,6 +1012,45 @@ public class ParseUnit {
         }
 
         return beforeCut;
+    }
+
+    private String TermNumber(String word) {
+
+        int numberWord = Integer.parseInt(word);
+        // under 1K
+        if (numberWord < 1000) {
+            return word;
+        } else {
+            // 1k - 1M
+            if (numberWord < 1000000) {
+                numberWord = numberWord / 1000;
+                termBeforeChanged = new StringBuffer(numberWord + "K");
+                return termBeforeChanged.toString();
+
+            } else {
+                // 1M - 1B
+                if (numberWord < 1000000000) {
+                    numberWord = numberWord / 1000000;
+                    termBeforeChanged = new StringBuffer(numberWord + "M");
+                    return termBeforeChanged.toString();
+                }
+                // over 1B
+                else {
+                    numberWord = numberWord / 1000000000;
+                    termBeforeChanged = new StringBuffer(numberWord + "B");
+                    return termBeforeChanged.toString();
+                }
+            }
+        }
+    }
+
+    private void checkCapital(String str){
+        CountryInfo capitalTerm = countryInMemory.getCountryByCapital(str.toUpperCase());
+        if(capitalTerm!=null){
+            String pop =capitalTerm.getPopulation();
+            String rightWord = TermNumber(pop);
+            capitalTerms.put(capitalTerm, capitalTerm.getCountryName()+":"+capitalTerm.getCurrency()+":" + rightWord);
+        }
     }
 
 

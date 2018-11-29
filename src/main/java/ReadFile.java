@@ -45,9 +45,15 @@ public class ReadFile {
                         if(true) {
                             String docText = element.getElementsByTag("TEXT").text();
                             String docName = element.getElementsByTag("DOCNO").text();
+                            String docCity = element.getElementsByTag("F P=104").text();
+                            if(!docCity.equals("")){
+                                if(docCity.contains("<F P=104>")){
+                                    int x=4;
+                                }
+                            }
                             String[] withoutSpaceText = docText.split(" "); // split the text by " "(space) into array
                             //System.out.println("~~~~~" + docName + "~~~~~~");
-                            Parse.parse(withoutSpaceText, docName);
+                            Parse.parse(withoutSpaceText, docName,docCity);
 
                         }
                         else{ // for debug
@@ -59,14 +65,22 @@ public class ReadFile {
                     e.printStackTrace();
                 }
                 counter++;
-                Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
-                Parse.allWordsDic.clear();
-                if(counter==16)
-                    break;
+
+                if(counter==50){
+                    Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+                    Parse.allWordsDic.clear();
+                    Parse.post.writePerDoc(Parse.docInfo);
+                    Parse.docInfo.clear();
+                    counter = 0;
+                }
+
 
 
 
             }
+            Parse.post.createPostingFileFirstTime(Parse.allWordsDic);
+            Parse.allWordsDic.clear();
+            Parse.post.createFileWithAllTerms(Parse.allTerm);
         } catch (IOException e) { }
     }
 
@@ -76,7 +90,7 @@ public class ReadFile {
         long start = System.nanoTime();
         //ReadFile rf = new ReadFile("C:\\Users\\USER\\Desktop\\search2018\\corpus\\FB496139");
 
-        ReadFile rf = new ReadFile("D:\\documents\\users\\dorlev\\Downloads\\corpus");
+        ReadFile rf = new ReadFile("d:\\documents\\users\\dorlev\\Downloads\\corpus\\corpus");
         //rf.p.printDic();
         long finish = System.nanoTime();
         System.out.println(finish-start);

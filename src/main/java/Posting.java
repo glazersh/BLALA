@@ -12,6 +12,7 @@ public class Posting {
     private int numberOfFile = 1;
     Queue<File>theFiles;
     Queue<File> merge1;
+    File postDocs;
 
     public Posting() {
         theFiles = new LinkedList<>();
@@ -33,12 +34,12 @@ public class Posting {
             for(ATerm term:words.keySet()){
                 treeDict.put(term,words.get(term));
             }
-            File file = new File("D:\\documents\\users\\dorlev\\Downloads\\SearchEngineJ\\src\\main\\java\\posting\\" + (numberOfFile++) + "");
+            File file = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
             try {
                 file.createNewFile();
                 writeToFile(treeDict, file);
                 theFiles.add(file);
-                if(theFiles.size()==8){
+                if(theFiles.size()==-1){
                     while(theFiles.size()!=0) {
                         //Thread t = new Thread(()->mergeFiles(theFiles.poll(),theFiles.poll()));
                         //t.start();
@@ -170,7 +171,7 @@ public class Posting {
         while (lineFile2.size()!=0) {
             add.append(lineFile2.poll() + "\n");
         }
-        File file = new File( "D:\\documents\\users\\dorlev\\Downloads\\SearchEngineJ\\src\\main\\java\\posting\\" + (numberOfFile++) + "");
+        File file = new File( "C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
         try {
             file.createNewFile();
             file1.delete();
@@ -203,6 +204,66 @@ public class Posting {
     }
 
 
+    public void createFileWithAllTerms(HashSet<String> allTerm) {
+        File file = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileTerms");
+        try {
+            file.createNewFile();
+            FileOutputStream out = new FileOutputStream(file);
+            Writer writer = new OutputStreamWriter(out);
+            try {
+                for (String term : allTerm) {
+                    writer.write(term + "\n");
+                }
+            }finally {
+                writer.close();
+            }
+        } catch (FileNotFoundException e1) {
+            e1.printStackTrace();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
+
+
+
+    public void writePerDoc(Map<String,String> docInfo){
+        String bf="";
+        if(postDocs==null){
+            postDocs = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileDocs");
+            try {
+                postDocs.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            FileOutputStream out = new FileOutputStream(postDocs,true);
+            try {
+                //Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
+                Writer writer = new OutputStreamWriter(out);
+                try {
+                    for (String perDoc:docInfo.keySet()) {
+                        writer.write(perDoc+":"+docInfo.get(perDoc)+"\n");
+                    }
+                    writer.write(bf);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    writer.close();
+                }
+            } finally {
+                out.close();
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
 
