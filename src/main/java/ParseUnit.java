@@ -1,16 +1,10 @@
 import IO.CountryInMemoryDB;
 import IO.CountryInfo;
 import Term.*;
-import com.sun.xml.internal.ws.util.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.util.*;
-
-import static jdk.nashorn.internal.runtime.JSType.isNumber;
 
 public class ParseUnit {
 
@@ -61,18 +55,20 @@ public class ParseUnit {
         insertAfterWords(); // init special words for our parse
         StopWords(); // init all stopWords from stopWords.txt
         insertSigns(); // init all the signs
+        /*
         try {
             countryInMemory = new CountryInMemoryDB("https://restcountries.eu/rest/v2/all?fields=name;capital;population;currencies");
         } catch (IOException e) {
             e.printStackTrace();
         }
+        */
     }
 
     private void StopWords(){
         Scanner file = null;
         try {
             //don't forget to change the path !!!!
-            file = new Scanner(new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
+            file = new Scanner(new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\resources\\stopWords.txt"));
             // For each word in the input
             while (file.hasNext()) {
                 // Convert the word to lower case, trim it and insert into the set
@@ -171,7 +167,7 @@ public class ParseUnit {
      * @return true / false
      */
     private boolean isNumber(String str) {
-        if (str == null) {
+        if (str == null || str.equals("")) {
             return false;
         }
         int length = str.length();
@@ -250,6 +246,12 @@ public class ParseUnit {
         if(word.charAt(word.length()-1) == '%')
             return false;
         if(month.containsKey(word) && isNumber(second))
+            return false;
+        if(word.equalsIgnoreCase("Between"))
+            return false;
+        if(word.contains("-"))
+            return false;
+        if(word.contains("/"))
             return false;
 
 //        if(word.contains("-"))
@@ -347,21 +349,25 @@ public class ParseUnit {
         else {
             termBeforeChanged = new StringBuffer(realword);
             switch (termWords[1]) {
+                case "thousand":
                 case "Thousand": {
                     termBeforeChanged.append("K");
                     term = new NumberK(termBeforeChanged.toString());
                     break;
                 }
+                case "million":
                 case "Million": {
                     termBeforeChanged.append("M");
                     term = new NumberM(termBeforeChanged.toString());
                     break;
                 }
+                case "billion":
                 case "Billion": {
                     termBeforeChanged.append("B");
                     term = new NumberB(termBeforeChanged.toString());
                     break;
                 }
+                case "trillion":
                 case "Trillion": {
                     termBeforeChanged.append("000B");
                     term = new NumberB(termBeforeChanged.toString());
@@ -379,9 +385,6 @@ public class ParseUnit {
         if(word.contains("/"))
             term = new NumberK(word);
         else {
-            if(word.contains(".")){
-                int x=4;
-            }
             double numberWord = Double.parseDouble(word);
             // under 1K
             if (numberWord < 1000) {
@@ -390,20 +393,20 @@ public class ParseUnit {
                 // 1k - 1M
                 if (numberWord < 1000000) {
                     numberWord = numberWord / 1000;
-                    termBeforeChanged = new StringBuffer(numberWord + "K");
+                    termBeforeChanged = new StringBuffer(cutDot0(numberWord) + "K");
                     term = new NumberK(termBeforeChanged.toString());
 
                 } else {
                     // 1M - 1B
                     if (numberWord < 1000000000) {
                         numberWord = numberWord / 1000000;
-                        termBeforeChanged = new StringBuffer(numberWord + "M");
+                        termBeforeChanged = new StringBuffer(cutDot0(numberWord) + "M");
                         term = new NumberM(termBeforeChanged.toString());
                     }
                     // over 1B
                     else {
                         numberWord = numberWord / 1000000000;
-                        termBeforeChanged = new StringBuffer(numberWord + "B");
+                        termBeforeChanged = new StringBuffer(cutDot0(numberWord) + "B");
                         term = new NumberB(termBeforeChanged.toString());
                     }
                 }
@@ -506,8 +509,196 @@ public class ParseUnit {
             return;
         }
         // is normal string
-        else
+        else // trash here
             term = new Word(real);
+    }
+
+    private void termFullDate(String word) {
+        String[]fullDate = word.split("/");
+        String day = fullDate[0];
+        String month = fullDate[1];
+        String year = fullDate[2];
+        if(year.length()==2){
+            year = "19"+year;
+        }
+        try{
+            if(Integer.parseInt(month) > 12 && Integer.parseInt(month) <= 31 && Integer.parseInt(day) < 13){
+                String tmp = month;
+                month =day;
+                day= tmp;
+            }
+
+            if(Integer.parseInt(month) < 13 && Integer.parseInt(day) <= 31){
+                term = new DateDay(month+"-"+day);
+                increaseCounter(term);
+                term = new DateYear(year+"-"+month);
+                increaseCounter(term);
+                return;
+            }
+
+
+            else{
+                term = new Word(word);
+                increaseCounter(term);
+            }
+
+        }catch (Exception e){
+            term = new Word(word);
+            increaseCounter(term);
+        }
+    }
+
+    private boolean isFullDate(String word) {
+        if(word.length()<8)
+            return false;
+        int counter =0;
+        for(int i=0;i<word.length();i++){
+            if(counter<6 &&counter%3==2){
+                if(word.charAt(i) != '/'){
+                    return false;
+                }
+                counter++;
+            }else{
+                if(!Character.isDigit(word.charAt(i))){
+                    return false;
+                }
+                counter++;
+            }
+        }
+        return true;
+    }
+
+
+    private boolean betweenTerm(String num1String, String andString, String num2String){
+        String num1 = cutSigns(num1String);
+        String and = cutSigns(andString);
+        String num2 = cutSigns(num2String);
+        if(and.equals("and") && isNumber(removeComma(num1)) && isNumber(removeComma(num2))) {
+            num1 = TermNumber(removeComma(num1));
+            num2 = TermNumber(removeComma(num2));
+            term = new Range(num1+"-"+num2);
+            increaseCounter(term);
+            return true;
+        }
+        return false;
+    }
+
+
+    public String transferNumberInRange(String number, String kind){
+        boolean isTrillion = false;
+        double firstNumber = Double.parseDouble(number);
+        if(kind.equalsIgnoreCase("Thousand")){
+            firstNumber*=1000;
+        }
+        if(kind.equalsIgnoreCase("Million")){
+            firstNumber*=1000000;
+        }
+        if(kind.equalsIgnoreCase("Billion")){
+            firstNumber*=1000000000;
+        }
+        if(kind.equalsIgnoreCase("Trillion")){
+            firstNumber*=1000000000;
+            isTrillion = true;
+        }
+        String finalRange = TermNumber(firstNumber+"");
+        if(isTrillion){
+            finalRange = finalRange.replace("B","000B");
+            isTrillion = false;
+        }
+        return finalRange;
+    }
+
+
+    private int RangeTerm(String word, String word2, String minusWord){
+        int addIndex = 0;
+
+        String afterWord = cutSigns(word2);
+        String beforeWord = cutSigns(minusWord);
+        String beforeHypen = word.split("-")[0];
+        String afterHypen = word.split("-")[1];
+
+        // 1-2 Month -> 1 month, 2 month
+        if (month.containsKey(afterWord) && isNumber(beforeHypen) && isNumber(afterHypen) ) {
+            String[] first = {beforeHypen, afterWord};
+            String[] second = {afterHypen, afterWord};
+            termDate(first);
+            termDate(second);
+            term = new NumberU(beforeHypen);
+            increaseCounter(term);
+            term = new NumberU(afterHypen);
+            increaseCounter(term);
+            return 1+addIndex;
+        }
+
+        // equalIgnore
+        if(isNumber(afterHypen) && (afterWord.equalsIgnoreCase("Thousand") || afterWord.equalsIgnoreCase("Million") || afterWord.equalsIgnoreCase("Billion") || afterWord.equalsIgnoreCase("Trillion"))){
+            String numberRange = transferNumberInRange(afterHypen, afterWord);
+            term=new Range(beforeHypen+"-"+numberRange);
+            increaseCounter(term);
+            return 1+addIndex;
+
+        }
+        if (isNumber(beforeHypen) && isNumber(afterHypen) && month.containsKey(beforeWord)) {
+            String[] first = {beforeHypen, beforeWord};
+            String[] second = {afterHypen, beforeWord};
+            termDate(first);
+            termDate(second);
+            return addIndex;
+        }
+        if((beforeHypen.equalsIgnoreCase("Thousand") || beforeHypen.equalsIgnoreCase("Million") || beforeHypen.equalsIgnoreCase("Billion") || beforeHypen.equalsIgnoreCase("Trillion"))) {
+            if(isNumber(beforeWord) && isNumber(afterHypen)){
+                String[]numbers = {beforeWord,afterHypen};
+                String[]kinds = {beforeHypen,afterWord};
+                String[]finalRange = new String[2];
+                for(int a=0;a<2;a++){
+                    finalRange[a] = transferNumberInRange(numbers[a],kinds[a]);
+                }
+                term=new Range(finalRange[0]+"-"+finalRange[1]);
+                increaseCounter(term);
+                return 1+addIndex;
+            }
+            if(isNumber(removeComma(beforeWord))){
+                oneTermNumber(removeComma(beforeWord));
+                String finalRange = transferNumberInRange(removeComma(beforeWord),beforeHypen);
+                term=new Range(finalRange+"-"+afterHypen);
+                increaseCounter(term);
+                return addIndex;
+            }
+            if(isNumber(removeComma(afterHypen))){
+                oneTermNumber(removeComma(afterHypen));
+                String finalRange = transferNumberInRange(removeComma(afterHypen),afterWord);
+                term=new Range(finalRange+"-"+afterHypen);
+                increaseCounter(term);
+                return addIndex;
+            }
+            else{
+                term = new Range(word);
+                increaseCounter(term);
+                return addIndex;
+            }
+        }
+        if(word.startsWith("-") && !isNumber(removeComma(word.substring(1)))){
+            if(!stopWords.contains(word.substring(1))){// trash here !
+                stem.add(word.toCharArray(), word.length());
+                stem.stem();
+                term=new Word(word.substring(1));
+                increaseCounter(term);
+            }
+            return addIndex;
+        }
+        /// here
+        if(isNumber(removeComma(beforeHypen)) && isNumber(removeComma(afterHypen))) {
+            beforeHypen = removeComma(beforeHypen);
+            afterHypen = removeComma(afterHypen);
+            oneTermNumber(beforeHypen);
+            oneTermNumber(afterHypen);
+            beforeHypen = TermNumber(beforeHypen);
+            afterHypen = TermNumber(afterHypen);
+            word = beforeHypen + "-" + afterHypen;
+        }
+        term = new Range(word);
+        increaseCounter(term);
+        return addIndex;
     }
 
     /**
@@ -537,71 +728,13 @@ public class ParseUnit {
             String word = cutSigns(allText[i]); // cut the signs
             //String secondWord = cutSigns(allText[i+1]);
 
-            if ((i + 3 < allText.length && word.equals("Between")) || ((word.contains("-") && !word.endsWith("-") && i - 1 >= 0 && i+1 <allText.length))) {
-                if(word.equals("Between")){
-                        String num1 = cutSigns(allText[i+1]);
-                        String and = cutSigns(allText[i+2]);
-                        String num2 = cutSigns(allText[i+3]);
-                    if(isNumber(num1) && isNumber(num2) && and.equals("and")) {
-                        term = new Range(num1+"-"+num2);
-                        i=i+3;
-                        increaseCounter(term);
-                        continue;
-                    }
-                    continue;
-                }
-                String afterWord = cutSigns(allText[i + 1]);
-                String beforeWord = cutSigns(allText[i - 1]);
-
-
-                // 1-2 Month -> 1 month, 2 month
-                if (month.containsKey(afterWord)) {
-                    String[] first = {word.split("-")[0], afterWord};
-                    String[] second = {word.split("-")[1], afterWord};
-                    termDate(first);
-                    termDate(second);
-                    i = i + 1;
-                    continue;
-
-                }
-                // equalIgnore
-                if(afterWord.equalsIgnoreCase("Thousand") || afterWord.equalsIgnoreCase("Million") || afterWord.equalsIgnoreCase("Billion") || afterWord.equalsIgnoreCase("Trillion")){
-                    ///////////////// here ///////////////
-                }
-                if (month.containsKey(beforeWord)) {
-                    if(isNumber(beforeWord)){
-                        int x=4;
-                    }
-
-
-                    term = new Range(word);
-                    increaseCounter(term);
-                    continue;
-                } else {
-                    if(word.startsWith("-") && !isNumber(word.substring(1))){
-                        if(!stopWords.contains(word.substring(1))){
-                            stem.add(word.toCharArray(), word.length());
-                            stem.stem();
-                            term=new Word(word.substring(1));
-                            increaseCounter(term);
-                        }
-                        continue;
-
-                    }
-                    /// here
-                    term = new Range(word);
-                    increaseCounter(term);
-                    continue;
-                }
-
-            }
-
-
             if ((word.length() == 1 && !isNumber(word)))
                 continue;
 
 
             if (!word.equals("") && (word.equals("Between") || !stopWords.contains(word.toLowerCase()))) {
+
+
 
                 // regular text
                 if (i + 1 < allText.length && isNormalWord(word, cutSigns(allText[i + 1]))) {
@@ -609,7 +742,12 @@ public class ParseUnit {
                     // stemmer
                     stem.add(word.toCharArray(), word.length());
                     stem.stem();
-                    term = new Word(stem.toString());
+                    if(stem.toString().endsWith("'") || stem.toString().endsWith("`")) {
+                        word = cutSigns(stem.toString());
+                    }else{
+                        word=stem.toString();
+                    }
+                    term = new Word(word);
                     increaseCounter(term);
                 } else {
                     if (i == allText.length - 1) {
@@ -622,6 +760,19 @@ public class ParseUnit {
                         }
                     }
 
+                    if ((i + 3 < allText.length && word.equals("Between"))) {
+                        if(betweenTerm(allText[i+1],allText[i+2],allText[i+3]))
+                            i=i+3;
+                        continue;
+
+                    }
+                    if(((word.contains("-") && !word.endsWith("-") && i - 1 >= 0 && i+1 <allText.length))) {
+                        int index = RangeTerm(word,allText[i+1],allText[i-1]);
+                        i += index;
+                        continue;
+                    }
+
+
                     if (!isTermNumber(word)) {
                         word = removeComma(word);
                         isTermNumber(word);
@@ -630,10 +781,6 @@ public class ParseUnit {
                     // if word's first character is with "$"
                     // and then check if word is Number.
                     if (!isTNumber && word.charAt(0) == '$') {
-
-                        if(word.equals("$1=Y124")){
-                            int x=4;
-                        }
 
                         allText[i] = allText[i].substring(1); // cut $
                         word = word.substring(1);
@@ -651,7 +798,6 @@ public class ParseUnit {
                             boolean flag = false;
                             for(int charW = 0; charW<word.length()-1;charW++){
                                 if(signs.contains(word.charAt(charW)+"")&& !Character.isDigit(word.charAt(charW+1))){
-                                    int x=4;
                                     flag = true;
                                     break;
                                 }
@@ -684,7 +830,6 @@ public class ParseUnit {
                             boolean flag = false;
                             for(int charW = 0; charW<word.length()-1;charW++){
                                 if(signs.contains(word.charAt(charW)+"")&& !Character.isDigit(word.charAt(charW+1))){
-                                    int x=4;
                                     flag = true;
                                     break;
                                 }
@@ -696,6 +841,10 @@ public class ParseUnit {
                             increaseCounter(term);
                             continue;
                         }
+                    }
+                    if(isFullDate(word)){
+                        termFullDate(word);
+                        continue;
                     }
 
                     int next = 0;
@@ -720,26 +869,24 @@ public class ParseUnit {
                         String[] termWords = new String[next + 1];
                         for (int j = 0; j < next + 1; j++) {
                             String wordTmp = cutSigns(allText[i + j]);
-                            if (!found) {
-
-                                if ((wordTmp.equals("Dollars") || wordTmp.equals("dollars"))) {
-                                    isTermPrice = true;
-                                    found = true;
-                                }
-                                if ((wordTmp.equals("Thousand") || wordTmp.equals("Million") || wordTmp.equals("Billion") || wordTmp.equals("Trillion"))) {
-                                    isTermNumber = true;
-                                    found = true;
-                                }
-                                if (month.containsKey(wordTmp)) {
-                                    isTermDate = true;
-                                    found = true;
-                                }
-                                if (wordTmp.equals("percent") || wordTmp.equals("percentage")) {
-                                    isTermPercent = true;
-                                    found = true;
-                                    termBeforeChanged = new StringBuffer(word + "%");
-                                }
+                            if ((wordTmp.equalsIgnoreCase("Dollars"))) {
+                                isTermPrice = true;
+                                found = true;
                             }
+                            if ((wordTmp.equalsIgnoreCase("Thousand") || wordTmp.equalsIgnoreCase("Million") || wordTmp.equalsIgnoreCase("Billion") || wordTmp.equalsIgnoreCase("Trillion"))) {
+                                isTermNumber = true;
+                                found = true;
+                            }
+                            if (month.containsKey(wordTmp)) {
+                                isTermDate = true;
+                                found = true;
+                            }
+                            if (wordTmp.equals("percent") || wordTmp.equals("percentage")) {
+                                isTermPercent = true;
+                                found = true;
+                                termBeforeChanged = new StringBuffer(word + "%");
+                            }
+
                             termWords[j] = wordTmp;
                         }
                         typeTerm(termWords, word);
@@ -791,7 +938,7 @@ public class ParseUnit {
                         p = allWordsDic.get(a);
                         //maybe no need to remove just put
                         allWordsDic.remove(a);
-                        checkCapital(term.finalName);
+                        //checkCapital(term.finalName);
                         allWordsDic.put(term, p);
                         //may not be needed if checking earlier
                         if (allWordsDic.get(term).get(docName) != null)
@@ -836,7 +983,7 @@ public class ParseUnit {
 
                 //if do not exist
                 termMap.put(docName, wordsInDoc.get(term));
-                checkCapital(term.finalName);
+                //checkCapital(term.finalName);
                 allWordsDic.put(term, termMap);
             }
         }
@@ -907,7 +1054,7 @@ public class ParseUnit {
 
             //if do not exist
             termMap.put(docName, wordsInDoc.get(termOld));
-            checkCapital(termOld.finalName);
+            //checkCapital(termOld.finalName);
             allWordsDic.put(termOld, termMap);
         }
     }
@@ -972,7 +1119,7 @@ public class ParseUnit {
             }
 
             termMap.put(docName, wordsInDoc.get(termOld));
-            checkCapital(termUp.finalName);
+            //checkCapital(termUp.finalName);
             allWordsDic.put(termUp, termMap);
         }
     }
@@ -986,8 +1133,8 @@ public class ParseUnit {
      */
     private void increaseCounter(ATerm term){
 
-        if(term.finalName.contains("`")) {
-            int x = 4;
+        if(term.finalName.equalsIgnoreCase("B")){
+            int x=4;
         }
 
         if(wordsInDoc.containsKey(term)) {
@@ -1006,12 +1153,6 @@ public class ParseUnit {
         int startCharacter=0;
         int endCharacter=beforeCut.length();
 
-        if(beforeCut.equals(""))
-            return beforeCut;
-        if(beforeCut.contains("pages")) {
-            int x = 4;
-        }
-
         // -,$,%,a-z,A-Z,0-9
         for(int i=0;i<beforeCut.length()-1;i++){
             if(Character.isLetterOrDigit(beforeCut.charAt(i)) || ((beforeCut.charAt(i) == '-' || beforeCut.charAt(i) == '$') && Character.isDigit(beforeCut.charAt(i+1))) ){
@@ -1025,8 +1166,14 @@ public class ParseUnit {
             beforeCut = beforeCut.substring(startCharacter);
             lengthBeforeWord = beforeCut.length();
             endCharacter=beforeCut.length();
+
+        }//remove " 's "
+        int startFromEnd = lengthBeforeWord;
+        if(beforeCut.length()-2>=0 && ((beforeCut.charAt(beforeCut.length()-2) == '`' || (int)beforeCut.charAt(beforeCut.length()-2) == 39) && beforeCut.endsWith("s"))){
+            endCharacter=beforeCut.length()-2;
+            startFromEnd-=2;
         }
-        for(int i=beforeCut.length()-1;i>0;i--){
+        for(int i=startFromEnd-1;i>0;i--){
             if(Character.isLetterOrDigit(beforeCut.charAt(i)) || (beforeCut.charAt(i) == '%'  && Character.isDigit(beforeCut.charAt(i-1))) || (beforeCut.charAt(i) == '.' && beforeCut.charAt(i-1) == 'S')){
                 break;
             }
@@ -1034,39 +1181,18 @@ public class ParseUnit {
                 endCharacter--;
         }
         if(endCharacter!=lengthBeforeWord) {
-            //System.out.println(beforeCut);
             beforeCut = beforeCut.substring(0, endCharacter);
         }
         if(beforeCut.length()==1 && !Character.isLetterOrDigit(beforeCut.charAt(0))){
             beforeCut = "";
         }
 
-
-/*
-        while (beforeCut.length()>1 && beforeCut.startsWith("-") &&!Character.isDigit(beforeCut.charAt(1))) {
-            beforeCut = beforeCut.substring(1);
-        }
-        while(beforeCut.endsWith("-")){
-            beforeCut=beforeCut.substring(0,beforeCut.length()-1);
-        }
-
-        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(0)+"")) {
-            beforeCut = beforeCut.substring(1);
-        }
-        while(!beforeCut.equals("") && signs.contains(beforeCut.charAt(beforeCut.length()-1)+"")) {
-            beforeCut = beforeCut.substring(0,beforeCut.length()-1);
-        }
-        while (beforeCut.length()>1 && beforeCut.startsWith("-") &&!Character.isDigit(beforeCut.charAt(1))) {
-            beforeCut = beforeCut.substring(1);
-        }
-        while(beforeCut.endsWith("-")){
-            beforeCut=beforeCut.substring(0,beforeCut.length()-1);
-        }
-*/
         return beforeCut;
     }
 
     private String TermNumber(String word) {
+        if(word.contains("/"))
+            return word;
         double numberWord = Double.parseDouble(word);
         String numberInString;
         // under 1K
@@ -1076,7 +1202,7 @@ public class ParseUnit {
             // 1k - 1M
             if (numberWord < 1000000) {
                 numberWord = numberWord / 1000;
-                numberInString = cutdDot0(numberWord);
+                numberInString = cutDot0(numberWord);
                 termBeforeChanged = new StringBuffer(numberInString + "K");
                 return termBeforeChanged.toString();
 
@@ -1084,14 +1210,14 @@ public class ParseUnit {
                 // 1M - 1B
                 if (numberWord < 1000000000) {
                     numberWord = numberWord / 1000000;
-                    numberInString = cutdDot0(numberWord);
+                    numberInString = cutDot0(numberWord);
                     termBeforeChanged = new StringBuffer(numberInString + "M");
                     return termBeforeChanged.toString();
                 }
                 // over 1B
                 else {
                     numberWord = numberWord / 1000000000;
-                    numberInString = cutdDot0(numberWord);
+                    numberInString = cutDot0(numberWord);
                     termBeforeChanged = new StringBuffer(numberInString + "B");
                     return termBeforeChanged.toString();
                 }
@@ -1099,9 +1225,10 @@ public class ParseUnit {
         }
     }
 
-    private String cutdDot0(double number){
+    private String cutDot0(double number){
         String numberInString = number+"";
-        if(numberInString.substring(0,numberInString.length()-2).equals(".0")){
+        String dot0 = numberInString.substring(numberInString.length()-2);
+        if(dot0.equals(".0")){
             return numberInString.substring(0,numberInString.length()-2);
         }
         return String.valueOf(number);

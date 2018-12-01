@@ -1,11 +1,8 @@
 import Term.ATerm;
-import sun.awt.Mutex;
 
 import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 public class Posting {
 
@@ -28,24 +25,25 @@ public class Posting {
                 }
 
                 private int compare(String finalName, String finalName1) {
-                    return finalName.compareTo(finalName1);
+                    return finalName.compareToIgnoreCase(finalName1);
                 }
             });
             for(ATerm term:words.keySet()){
                 treeDict.put(term,words.get(term));
             }
-            File file = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
+            File file = new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
             try {
                 file.createNewFile();
-                writeToFile(treeDict, file);
+                prepareForWriting(treeDict, file);
                 theFiles.add(file);
-                if(theFiles.size()==-1){
-                    while(theFiles.size()!=0) {
+                if(theFiles.size()==2){
+                    mergeFiles(theFiles.poll(), theFiles.poll());
+                    while(theFiles.size()==-1) {
                         //Thread t = new Thread(()->mergeFiles(theFiles.poll(),theFiles.poll()));
                         //t.start();
                         mergeFiles(theFiles.poll(), theFiles.poll());
                     }
-                    while(merge1.size()!=1){
+                    while(merge1.size()==2){
                         //Thread t = new Thread(()->mergeFiles(merge1.poll(),merge1.poll()));
                         //t.start();
                         mergeFiles(merge1.poll(),merge1.poll());
@@ -85,83 +83,58 @@ public class Posting {
 
     }
 
-    private void writeToFile(Map<ATerm,Map<String,Integer>> wordsInDictionary, File file) {
+    private void prepareForWriting(Map<ATerm,Map<String,Integer>> wordsInDictionary, File file) {
         StringBuffer wordsInfo = new StringBuffer();
         StringBuffer docNumber ;
         for (ATerm term : wordsInDictionary.keySet()) {
             docNumber = new StringBuffer();
             for(String docName:wordsInDictionary.get(term).keySet()){
-                docNumber.append("["+docName+":"+wordsInDictionary.get(term).get(docName)+"]");
+                docNumber.append("{"+docName+":"+wordsInDictionary.get(term).get(docName)+"}");
             }
-            wordsInfo.append(term.finalName + docNumber+"\n"); // # number of [ is doc frequency (df), idf
-
-        }
-        try {
-            FileOutputStream out = new FileOutputStream(file);
-            try {
-                //Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
-                Writer writer = new OutputStreamWriter(out);
-                try {
-                    writer.write(wordsInfo.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    writer.close();
-                }
-            } finally {
-                out.close();
+            if(Character.isUpperCase(term.finalName.charAt(0))){
+                wordsInfo.append(term.finalName +'"'+ docNumber+"\n");
+            }else{
+                wordsInfo.append(term.finalName+'"' + docNumber+"\n");
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+             // # number of [ is doc frequency (df), idf
         }
-
+        writeToFile(wordsInfo,file);
     }
 
     private void mergeFiles(File file1, File file2) {
         Queue<String> lineFile1 = readFile(file1);
         Queue<String> lineFile2 = readFile(file2);
 
-        StringBuffer add = new StringBuffer("");
-        String l1="";
-        String l2="";
+        StringBuffer add = new StringBuffer();
 
-        if(lineFile1.size()!=0 && lineFile2.size()!=0) {
-            l1 = lineFile1.poll();
-            l2 = lineFile2.poll();
+
+        String termInfoFromPos1="";
+        String termInfoFromPos2="";
+
+
+        if(lineFile1.size()>0 && lineFile2.size()>0){
+            termInfoFromPos1 = lineFile1.poll();
+            termInfoFromPos2 = lineFile2.poll();
         }
 
-        String termL1 = l1.split(Pattern.quote("["))[0];
-        String termL2 = l2.split(Pattern.quote("["))[0];
-
         while (lineFile1.size()!=0 && lineFile2.size()!=0) {
-            int check = termL1.compareTo(termL2);
-            if(termL1.equals("special") || termL2.equals("special")){
+
+            int check = termInfoFromPos1.compareTo(termInfoFromPos2);
+            // check when starts the a..b..c
+            if(termInfoFromPos1.startsWith("back")){
                 int x=4;
             }
-            if (check == 0) {
-                add.append(l1);
-                add.append(l2.substring(termL2.length()) + "\n");
 
-                // merge
-                l1 = lineFile1.poll();
-                l2 = lineFile2.poll();
-
-                termL1 = l1.split(Pattern.quote("["))[0];
-                termL2 = l2.split(Pattern.quote("["))[0];
-                continue;
-            }
             if (check > 0) {
-                add.append(l2 + "\n");
-                l2 = lineFile2.poll();
-                termL2 = l2.split(Pattern.quote("["))[0];
+                add.append(termInfoFromPos2 + "\n");
+                if((lineFile1.size()!=0 && lineFile2.size()!=0)) {
+                    termInfoFromPos2 = lineFile2.poll();
+                }
             } else {
-                add.append(l1 + "\n");
-                l1 = lineFile1.poll();
-                termL1 = l1.split(Pattern.quote("["))[0];
+                add.append(termInfoFromPos1 + "\n");
+                if(lineFile1.size()!=0 && lineFile2.size()!=0) {
+                    termInfoFromPos1 = lineFile1.poll();
+                }
 
             }
         }
@@ -171,31 +144,15 @@ public class Posting {
         while (lineFile2.size()!=0) {
             add.append(lineFile2.poll() + "\n");
         }
-        File file = new File( "C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
+        File file = new File( "C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\java\\postings\\" + (numberOfFile++) + "");
         try {
             file.createNewFile();
             file1.delete();
             file2.delete();
             merge1.add(file);
-            FileOutputStream out = new FileOutputStream(file);
-            try {
-                Writer writer = new OutputStreamWriter(out);
-                //Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
-                //Writer writer = new OutputStreamWriter(out);
-                try {
-                    writer.write(add.toString());
-                }catch (IOException e) {
-                    e.printStackTrace();
-                }finally {
-                    writer.close();
-                }
-            } finally {
-                out.close();
-            }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+
+            writeToFile(add,file);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -205,7 +162,7 @@ public class Posting {
 
 
     public void createFileWithAllTerms(HashSet<String> allTerm) {
-        File file = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileTerms");
+        File file = new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileTerms");
         try {
             file.createNewFile();
             FileOutputStream out = new FileOutputStream(file);
@@ -225,12 +182,38 @@ public class Posting {
     }
 
 
+    private void writeToFile(StringBuffer allTermInfo, File file){
+        try {
+            FileOutputStream out = new FileOutputStream(file);
+            try {
+                //Writer writer = new OutputStreamWriter(new GZIPOutputStream(out), "UTF-8");
+                Writer writer = new OutputStreamWriter(out);
+                try {
+                    writer.write(allTermInfo.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    writer.close();
+                }
+            } finally {
+                out.close();
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
 
     public void writePerDoc(Map<String,String> docInfo){
         String bf="";
         if(postDocs==null){
-            postDocs = new File("C:\\Users\\dorlev\\IdeaProjects\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileDocs");
+            postDocs = new File("C:\\Users\\USER\\Desktop\\מערכות מידע דור\\סמסטר ד\\נושאים מתקדמים בתכנות\\SearchEngineJ\\src\\main\\java\\postings\\"+"FileDocs");
             try {
                 postDocs.createNewFile();
             } catch (IOException e) {
